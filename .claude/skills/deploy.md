@@ -11,6 +11,7 @@
 - [ ] 所有环境变量已配置（对照 .env.example）⚠️ 风险：缺 Key 导致静默失败
 - [ ] Alembic migration 已生成并 review
 - [ ] 测试报告全部 ✅
+- [ ] 安全审计通过（gstack /cso 置信度 ≥ 8/10）⚠️ 风险：OWASP Top 10 漏洞
 - [ ] 用户回复「1」确认
 ```
 
@@ -66,6 +67,28 @@ alembic upgrade head
 - 禁止直接修改数据库表结构
 - 禁止删除迁移文件
 - 每次迁移必须可回滚（检查 downgrade() 函数）
+
+---
+
+## 安全审计（gstack /cso）— 上线前必跑
+
+运行 `gstack: /cso` 执行 OWASP Top 10 + STRIDE 威胁建模：
+
+- SQL 注入 / XSS / IDOR / 未授权 API 端点
+- 环境变量泄漏（hardcoded secrets 扫描）
+- Celery 任务越权（job_id 归属校验）
+- FastAPI 路由认证缺失检查
+
+**置信度 < 8/10 的发现必须修复后才能继续部署。**
+
+---
+
+## 发布（gstack /ship）
+
+运行 `gstack: /ship` 执行标准发布流程：
+1. 运行完整测试套件（pytest + gstack /qa）
+2. 创建 PR，自动生成 Release Notes
+3. 等待用户回复「1」后合并
 
 ---
 

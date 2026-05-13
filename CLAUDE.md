@@ -22,11 +22,14 @@
 
 | 触发情境 | 读取 Skill |
 |---|---|
-| 讨论产品方向、功能边界、用户价值、竞品对比 | `.claude/skills/product.md` |
-| 开发新功能、新 API、新模块 | `.claude/skills/feature-dev.md` |
-| 修复 Bug、排查问题、分析报错 | `.claude/skills/bug-fix.md` |
-| 编写测试、输出测试报告 | `.claude/skills/testing.md` |
-| 部署上线、环境配置、迁移 | `.claude/skills/deploy.md` |
+| 讨论产品方向、功能边界、用户价值、竞品对比 | `.claude/skills/product.md` → 结合 `superpowers: brainstorming` |
+| 开发新功能、新 API、新模块 | `.claude/skills/feature-dev.md` → 结合 `superpowers: writing-plans` |
+| 修复 Bug、排查问题、分析报错 | `.claude/skills/bug-fix.md` → 结合 `gstack: /investigate` |
+| 编写测试、输出测试报告 | `.claude/skills/testing.md` → 结合 `superpowers: tdd` + `gstack: /qa` |
+| 前端 UI 开发、页面验证、设计审计 | `.claude/skills/frontend.md` → 结合 `gstack: /browse /qa /design-review` |
+| 部署上线、环境配置、迁移 | `.claude/skills/deploy.md` → 结合 `gstack: /cso /ship` |
+| 代码审查（任意场景） | `gstack: /review` |
+| 并行子任务开发（多模块同步） | `superpowers: subagent-driven-development` |
 
 ---
 

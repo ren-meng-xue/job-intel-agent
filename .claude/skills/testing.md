@@ -5,6 +5,18 @@
 
 ---
 
+## TDD 循环（superpowers tdd）
+
+调用 `superpowers: tdd` skill，强制执行 RED → GREEN → REFACTOR：
+
+1. **RED**：先写失败的测试，确认它能捕捉到目标行为（运行看到红色才算）
+2. **GREEN**：写最小实现让测试通过，不过度设计
+3. **REFACTOR**：在测试保持绿色的前提下优化代码
+
+**禁止先写实现再补测试。**
+
+---
+
 ## 测试分层
 
 | 层级 | 覆盖范围 | 工具 |
@@ -39,13 +51,18 @@
 
 ---
 
-## E2E 验证（gstack）
+## E2E 验证（gstack /qa）
 
-涉及前端的功能必须用 gstack 验证：
-1. 截图确认页面布局正确
-2. 模拟关键交互（上传简历、粘贴 URL、确认节点）
-3. 验证 loading / error / empty 三态
-4. 改动前后用 `ui_diff_check` 对比
+涉及前端的功能必须运行 `gstack: /qa`，使用真实 Chromium 浏览器：
+
+1. **JobInputForm 提交流程**：粘贴 JD URL → 触发爬取 → 进度流显示
+2. **简历上传流程**：拖拽 PDF → 解析状态 → 成功反馈
+3. **Human-in-the-Loop 确认弹窗**：职位确认 → 研究方向选择
+4. **ReportCard 渲染**：六模块数据完整展示
+5. **三态验证**：loading / error / empty 全部覆盖
+6. **改动前后对比**：用 `ui_diff_check` 截图 before / after
+
+gstack /qa 发现 bug → 自动修复 → 重新运行直到全绿。
 
 ---
 

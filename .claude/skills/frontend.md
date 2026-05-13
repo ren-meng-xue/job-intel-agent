@@ -36,13 +36,30 @@
 
 ---
 
-## Step 3：gstack 验证（必须执行）
+## Step 3：gstack 验证（必须执行，三件套）
 
+**1. gstack /browse** — 视觉确认
 ```
-1. 打开目标页面，截图确认布局
-2. 模拟关键交互（点击、表单提交、状态切换）
-3. 验证 mobile / desktop 两个断点
-4. 有改动时用 ui_diff_check 对比 before / after
+导航目标页面，截图确认布局、间距、色彩
+验证 mobile / desktop 两个断点
+```
+
+**2. gstack /qa** — 自动化 QA
+```
+运行真实 Chromium 浏览器测试：
+- Golden Path：完整用户流程走通
+- 边界场景：空输入、超长 URL、特殊字符
+- 错误场景：网络失败、API 超时
+发现 bug → 自动修复 → 重新运行，直到全绿
+```
+
+**3. gstack /design-review** — 设计审计
+```
+输出 0-10 评分（低于 7 分须修复再提交）：
+- 排版一致性
+- 间距规范（Tailwind spacing scale）
+- 色彩对比度（WCAG AA）
+- 改动前后 ui_diff_check 对比截图
 ```
 
 **禁止跳过 gstack 直接 commit。截图是验证证据。**

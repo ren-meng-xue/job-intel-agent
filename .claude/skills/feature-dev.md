@@ -8,13 +8,15 @@
 ## 流程（严格按顺序，不可跳步）
 
 ```
+0. 需求澄清（superpowers brainstorming）
 1. 头脑风暴
 2. 实现
 3. 生成 TODO 清单
 4. 测试 → 测试报告
-5. 更新 Changelog 并展示
-6. 等待用户回复「1」
-7. commit → push
+5. 代码审查（gstack /review）
+6. 更新 Changelog 并展示
+7. 等待用户回复「1」
+8. commit → push
 ```
 
 ---
@@ -25,6 +27,18 @@
 - 函数、类、模块顶部写一行中文说明其职责
 - 复杂逻辑行内加中文注释，说明「为什么」而非「是什么」
 - 禁止写无意义注释（如 `# 定义变量 x`）
+
+---
+
+## Step 0：需求澄清（superpowers brainstorming）
+
+调用 `superpowers: brainstorming` skill，通过苏格拉底式提问明确功能边界：
+- 待解决的核心问题是什么？
+- 谁是用户，他们的成功标准是什么？
+- 有哪些约束和非目标？
+
+输出分段规格书：**Problem / Solution / Constraints / Acceptance Criteria**，
+用户确认后再进入 Step 1。**功能模糊时必须执行，不允许跳过。**
 
 ---
 
@@ -68,7 +82,16 @@ TODO:
 
 ---
 
-## Step 5：Changelog 格式
+## Step 5：代码审查（gstack /review）
+
+提交前运行 `gstack: /review`：
+- 检查代码质量、潜在安全隐患、性能问题
+- 自动修复发现的问题
+- 审查通过后才能进入 Step 6
+
+---
+
+## Step 6：Changelog 格式
 
 路径：`changelogs/YYYY-MM-DD.md`
 
@@ -82,3 +105,14 @@ TODO:
 Emoji：🚀 新功能 / 🐛 修复 / ♻️ 重构 / 📝 文档配置
 
 写完后展示给用户，等回复「1」才能 commit。
+
+---
+
+## 并行子任务（superpowers subagent-driven-development）
+
+开发多个相互独立的模块时（如 LangGraph 各 Node 并行开发），
+调用 `superpowers: subagent-driven-development`：
+- 将任务分解为 2-5 分钟微任务
+- 每个子代理持有精确的文件路径 + 完整代码片段
+- 两阶段审查：规格符合性 → 代码质量
+- 适用场景：开发 Agent Graph 多个节点、前后端并行开发
