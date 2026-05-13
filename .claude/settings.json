@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.production)",
+      "Read(**/.env.development)",
+      "Read(**/.env.staging)",
+      "Read(**/.env.test)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '\"[Pre-Hook] 即将执行: \" + .tool_input.command' 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f || exit 0; if [[ \"$f\" == *.py ]]; then black \"$f\" 2>/dev/null && isort \"$f\" 2>/dev/null; elif [[ \"$f\" == *.ts || \"$f\" == *.tsx ]]; then prettier --write \"$f\" 2>/dev/null; fi; } || true"
+          }
+        ]
+      }
+    ]
+  }
+}
