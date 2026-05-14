@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
@@ -62,14 +62,11 @@ info "执行 alembic upgrade head ..."
 ok "数据库迁移完成"
 
 # ── 后台进程管理 ──────────────────────────────────────────
-PIDS=()
-
 cleanup() {
   echo ""
   info "正在关闭所有服务 ..."
-  for pid in "${PIDS[@]}"; do
-    kill "$pid" 2>/dev/null || true
-  done
+  # 杀掉当前 shell 所有后台子进程
+  kill $(jobs -p 2>/dev/null) 2>/dev/null || true
   docker compose -f "$ROOT_DIR/docker-compose.yml" stop postgres redis
   ok "已退出"
 }
@@ -78,14 +75,14 @@ trap cleanup INT TERM
 # ── 后端 FastAPI（uvicorn）───────────────────────────────
 info "启动 FastAPI / uvicorn (port 8001) ..."
 (cd "$BACKEND_DIR" && uvicorn app.main:app --reload --host 0.0.0.0 --port 8001) &
-PIDS+=($!)
-ok "FastAPI PID=${PIDS[-1]}"
+BACKEND_PID=$!
+ok "FastAPI PID=$BACKEND_PID"
 
 # ── Celery Worker ─────────────────────────────────────────
 info "启动 Celery worker ..."
 (cd "$BACKEND_DIR" && celery -A app.tasks:celery_app worker --loglevel=info) &
-PIDS+=($!)
-ok "Celery PID=${PIDS[-1]}"
+CELERY_PID=$!
+ok "Celery PID=$CELERY_PID"
 
 # ── 前端 Next.js（前台，显示日志）────────────────────────
 info "启动 Next.js / pnpm dev (port 3001) ..."

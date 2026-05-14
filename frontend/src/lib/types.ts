@@ -27,3 +27,19 @@ export interface SSEEvent {
   message: string;
   data?: unknown;
 }
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user_id: string;
+  email: string;
+  username: string;
+}
+
+export interface UserInfo {
+  id: string;
+  email: string;
+  username: string;
+  status: string;
+  email_verified: boolean;
+}
