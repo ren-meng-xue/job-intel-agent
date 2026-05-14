@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,4 +18,6 @@ class Job(Base):
     title: Mapped[str | None] = mapped_column(String(256))
     company: Mapped[str | None] = mapped_column(String(256))
     status: Mapped[str] = mapped_column(String(32), default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
