@@ -4,7 +4,6 @@
 
 ```markdown
 ## <branch-name>
-**git:** local | pushed
 **spec:** `path/to/spec.md` | —
 
 **todo**
@@ -28,14 +27,13 @@
 - 第二天同一分支继续开发：在新文件里重新写该分支的块，todo 带入未完成项
 
 **字段**
-- `git` — 只有两个值：`local`（committed 未 push）/ `pushed`（已推远端）；commit 后改 local，push 后改 pushed
 - `spec` — 对应的 spec 文件路径；无 spec 的 chore/fix 写 `—`
 - `todo` — 该分支所有待做子任务，完整列出；完成后从这里删掉、加到 done
 - `done` — 已完成项，按完成顺序追加；有测试的条目末尾加 ` · 🧪`
 
 **时机**
-- 每次 commit 前：把刚完成的任务从 todo 移到 done，git 改为 `local`，纳入本次 commit
-- 每次 push 后：把 git 改为 `pushed`，单独 commit 或合并到下次 commit 均可
+- 每次 commit 前：把刚完成的任务从 todo 移到 done，纳入本次 commit
+- 写完计划文档后：将计划所有 Task 写入 todo 区，若该分支块不存在则先创建
 
 **读取**
 - 每次会话开始，读最新的 changelog 文件，检查 todo 和当前分支是否一致

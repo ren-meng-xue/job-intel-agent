@@ -16,10 +16,15 @@
    - `alembic upgrade head` 本地运行成功（表/字段与模型一致）
    - 迁移文件已纳入本次 commit
 8. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
-9. 每次会话开始时，以及用户说「todo」或询问下一步时，读取 `changelogs/` 下日期最新的 `.md` 文件（格式见 `.claude/skills/changelog.md`），了解当前进展。读完后必须执行 `git branch --show-current` 检查当前分支，若与 changelog 记录分支不一致，提醒用户切换；若一致，直接进入下一步工作
+9. 每次会话开始时，以及用户说「todo」或询问下一步时，按顺序执行：
+   a. 读取 `changelogs/` 下日期最新的 `.md` 文件，了解当前进展
+   b. 执行 `git branch --show-current`，若与 changelog 记录分支不一致，提醒用户切换
+   c. 若 changelog todo 有内容 → 列出待办，询问从哪条开始
+   d. 若 changelog todo 为空 → 主动读取 `docs/superpowers/plans/` 下最新的计划文件，提议下一步任务；若无计划文件则询问用户意图
 10. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
-11. 每次 commit 前，必须先更新最新 changelog：把完成的任务从 todo 移到 done，git 改为 `local`，纳入本次 commit。若当天无 changelog 则新建
-12. push 成功后，把 changelog 中对应分支的 `git` 改为 `pushed`，纳入下次 commit
+11. 每次 commit 前，必须先更新最新 changelog：把完成的任务从 todo 移到 done，纳入本次 commit。若当天无 changelog 则新建
+12. 当用户要求开发新功能、新 Phase 或新模块时，制定计划前必须先执行 `git branch --show-current`。若当前在 `main` 且本次开发应在独立 feature 分支上，提示用户创建或切换到对应分支，等待确认后再继续
+13. 完成计划文档后，立即将计划中所有 Task 写入当天 changelog 的 `todo` 区（格式：`- [ ] Task N: 描述`）。若当天 changelog 中无当前分支的块，先创建块再写入
 
 ---
 
