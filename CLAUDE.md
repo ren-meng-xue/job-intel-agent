@@ -5,8 +5,8 @@
 1. 始终使用**简体中文**回复
 2. 所有配置走环境变量，**禁止硬编码** Key / Secret
 3. commit / push 规则：
-   - 若用户消息**本身即为 commit/push 指令**（如「commit」「push」「commit+push」），直接执行，无需额外确认
-   - 若 commit/push 是 Claude **主动发起**（完成某任务后自动提交），必须先说明将要提交的内容，等用户回复「**1**」后执行
+   - 若用户消息**本身即为 commit/push 指令**（如「commit」「push」「commit+push」），直接执行
+   - 若 commit/push 是 Claude **主动发起**，必须先说明将要提交的内容，等用户回复「**1**」后执行
    - push 完成后，若当前分支非 main/master，询问用户是否需要合并到 main
 4. LLM 调用只在 `services/` 层，`api/` 层禁止直接调用
 5. 实时状态用 SSE + Redis Pub/Sub，**禁止轮询**
@@ -16,14 +16,10 @@
    - `alembic upgrade head` 本地运行成功（表/字段与模型一致）
    - 迁移文件已纳入本次 commit
 8. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
-9. 每次会话开始时，以及用户说「todo」或询问下一步时，读取 `changelogs/` 下日期最新的 `.md` 文件，了解当前进展和下一步方向。**不需要扫所有 changelog，只读最新一篇**。读完后必须执行 `git branch --show-current` 检查当前分支，若与 changelog 记录分支不一致，提醒用户切换；若一致，直接进入下一步工作
+9. 每次会话开始时，以及用户说「todo」或询问下一步时，读取 `changelogs/` 下日期最新的 `.md` 文件（格式见 `.claude/skills/changelog.md`），了解当前进展。读完后必须执行 `git branch --show-current` 检查当前分支，若与 changelog 记录分支不一致，提醒用户切换；若一致，直接进入下一步工作
 10. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
-11. 每次 commit 前，必须先更新最新 changelog，记录本次变更，纳入本次 commit。若当天无 changelog 则新建
-12. **changelog status 生命周期**（每次动作后同步更新，纳入当次 commit）：
-    - `🔄 in progress` — 会话开始、开始新功能时写入
-    - `✅ committed` — commit 成功后更新
-    - `🚀 pushed` — push 成功后更新
-    - `🔀 merged` — 合并到 main 后更新
+11. 每次 commit 前，必须先更新最新 changelog：把完成的任务从 todo 移到 done，git 改为 `local`，纳入本次 commit。若当天无 changelog 则新建
+12. push 成功后，把 changelog 中对应分支的 `git` 改为 `pushed`，纳入下次 commit
 
 ---
 
@@ -41,6 +37,7 @@
 | 部署上线、环境配置、迁移 | `.claude/skills/deploy.md` → 结合 `gstack: /cso /ship` |
 | 代码审查（任意场景） | `gstack: /review` |
 | 并行子任务开发（多模块同步） | `superpowers: subagent-driven-development` |
+| 写 changelog、读 changelog、更新进度 | `.claude/skills/changelog.md` |
 
 ---
 
@@ -52,4 +49,5 @@
 - LLM：`gpt-4o`（主推理）/ `gpt-4o-mini`（轻量任务）
 - 爬取：Firecrawl | 搜索：Tavily API | 数据库：PostgreSQL + pgvector
 - 包管理：**uv**（后端，Python 3.12，`pyproject.toml` + `uv sync`）/ **pnpm**（前端）
+- 测试：**pytest** + pytest-asyncio + httpx
 - 目录：`backend/`（FastAPI + Alembic）/ `frontend/`（Next.js）/ `dev.sh`（一键启动）
