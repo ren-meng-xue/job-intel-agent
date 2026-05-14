@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: str
     DATABASE_URL: str
     REDIS_URL: str
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # Auth 配置
     SECRET_KEY: str = "dev-secret-key-change-in-production"
