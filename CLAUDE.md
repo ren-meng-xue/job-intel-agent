@@ -22,9 +22,13 @@
    c. 若 changelog todo 有内容 → 列出待办，询问从哪条开始
    d. 若 changelog todo 为空 → 主动读取 `docs/superpowers/plans/` 下最新的计划文件，提议下一步任务；若无计划文件则询问用户意图
 10. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
-11. 每次 commit 前，必须先更新最新 changelog：把完成的任务从 todo 移到 done，纳入本次 commit。若当天无 changelog 则新建
+11. 每次 commit 前，必须先更新最新 changelog：
+    - spec 相关：删除已完成的 todo 条目（todo 清空则删整块），在 spec 组末尾追加 `**commit message**` + done 条目
+    - 非 spec（chore/fix/docs）：在分支块末尾追加 `================================================================================` + `**commit message**` + done 列表
+    - 若当天无 changelog 则新建
+14. 开发顺序：先写实现代码，实现完成后再写测试并运行通过。不使用"先写失败测试"的 TDD 流程
 12. 当用户要求开发新功能、新 Phase 或新模块时，制定计划前必须先执行 `git branch --show-current`。若当前在 `main` 且本次开发应在独立 feature 分支上，提示用户创建或切换到对应分支，等待确认后再继续
-13. 完成计划文档后，立即将计划中所有 Task 写入当天 changelog 的 `todo` 区（格式：`- [ ] Task N: 描述`）。若当天 changelog 中无当前分支的块，先创建块再写入
+13. 完成计划文档后，在当天 changelog 的分支块末尾追加 `================================================================================` + 新 spec 组，写入 spec 路径和所有任务到 todo（用描述性名称，不用 Task N 编号）。若无分支块则先创建
 
 ---
 
