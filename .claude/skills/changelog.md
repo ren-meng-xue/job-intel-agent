@@ -12,14 +12,11 @@
 - [ ] 子任务 B
 
 **done**
-1. ✅ 已完成项
-2. ✅ 已完成项
+1. ✅🧪 有测试的完成项
+2. ✅ 无需测试的完成项
 ```
 
-`tests` 行可选，有测试时追加在 done 列表后：
-```
-**tests** pytest：N 个单元测试，覆盖 xxx · **review** ✅ 通过
-```
+符号说明：`✅🧪` = 完成且有测试覆盖，`✅` = 完成无测试（配置/文档/chore 类）
 
 ---
 
@@ -34,7 +31,7 @@
 - `git` — 只有两个值：`local`（committed 未 push）/ `pushed`（已推远端）；commit 后改 local，push 后改 pushed
 - `spec` — 对应的 spec 文件路径；无 spec 的 chore/fix 写 `—`
 - `todo` — 该分支所有待做子任务，完整列出；完成后从这里删掉、加到 done
-- `done` — 已完成项，按完成顺序追加
+- `done` — 已完成项，按完成顺序追加；`✅🧪` 表示有测试覆盖，`✅` 表示无测试
 
 **时机**
 - 每次 commit 前：把刚完成的任务从 todo 移到 done，git 改为 `local`，纳入本次 commit
