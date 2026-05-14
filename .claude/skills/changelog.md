@@ -2,26 +2,44 @@
 
 ## 模板
 
-每次功能完成或阶段结束时，在 `changelogs/YYYY-MM-DD.md` 追加记录。统一使用以下模板：
-
 ```markdown
-# YYYY-MM-DD
-
 ## <branch-name>
-**status:** ✅ done / 🚧 WIP
-**todo:** <下一步描述，无则写 none>
+**git:** local | pushed
+**spec:** `path/to/spec.md` | —
+
+**todo**
+- [ ] 子任务 A
+- [ ] 子任务 B
 
 **done**
- 1. ✅ <完成项>
- 2. ✅ <完成项>
-
-**tests** <框架/工具>：<覆盖了什么，简明扼要> · **review** <状态>
+1. ✅ 已完成项
+2. ✅ 已完成项
 ```
+
+`tests` 行可选，有测试时追加在 done 列表后：
+```
+**tests** pytest：N 个单元测试，覆盖 xxx · **review** ✅ 通过
+```
+
+---
 
 ## 规则
 
-- 每个 `## <branch-name>` 块对应一个分支的工作记录
-- 同一文件可包含多个分支的记录
-- 字段名统一用英文小写：`status`、`todo`、`done`、`tests`、`review`
-- `tests` 需写明测试框架/工具以及覆盖范围，简明扼要，例如：`pytest：27 个单元测试，覆盖 Auth API + Service + 模型`
-- 会话开始时读取最新 changelog，检查每个有 `todo` 的记录：若其 `branch` 与当前 git 分支不一致，提醒用户可能需要切换分支
+**文件**
+- 每天一个文件：`changelogs/YYYY-MM-DD.md`，文件头一行写 `# YYYY-MM-DD`
+- 每个分支在当天文件里只有一个块，多次 commit 追加 done 条目，不新建块
+- 第二天同一分支继续开发：在新文件里重新写该分支的块，todo 带入未完成项
+
+**字段**
+- `git` — 只有两个值：`local`（committed 未 push）/ `pushed`（已推远端）；commit 后改 local，push 后改 pushed
+- `spec` — 对应的 spec 文件路径；无 spec 的 chore/fix 写 `—`
+- `todo` — 该分支所有待做子任务，完整列出；完成后从这里删掉、加到 done
+- `done` — 已完成项，按完成顺序追加
+
+**时机**
+- 每次 commit 前：把刚完成的任务从 todo 移到 done，git 改为 `local`，纳入本次 commit
+- 每次 push 后：把 git 改为 `pushed`，单独 commit 或合并到下次 commit 均可
+
+**读取**
+- 每次会话开始，读最新的 changelog 文件，检查 todo 和当前分支是否一致
+- 不需要扫所有 changelog，只读最新一篇
