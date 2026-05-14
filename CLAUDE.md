@@ -5,6 +5,7 @@
 1. 始终使用**简体中文**回复
 2. 所有配置走环境变量，**禁止硬编码** Key / Secret
 3. commit / push 前必须等待用户回复「**1**」，否则不执行
+   - push 完成后，若当前分支非 main/master，**必须询问用户是否需要合并到 main 分支**
 4. LLM 调用只在 `services/` 层，`api/` 层禁止直接调用
 5. 实时状态用 SSE + Redis Pub/Sub，**禁止轮询**
 6. 数据库变更必须走 Alembic，禁止直接改表结构
@@ -13,7 +14,8 @@
    - `alembic upgrade head` 本地运行成功（表/字段与模型一致）
    - 迁移文件已纳入本次 commit
 8. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
-9. 每次会话开始时，读取 `changelogs/` 下日期最新的 `.md` 文件，了解当前进展和下一步方向。**不需要扫所有 changelog，只读最新一篇**
+9. 每次会话开始时，以及用户说「todo」或询问下一步时，读取 `changelogs/` 下日期最新的 `.md` 文件（格式与分支检查规则见 `.claude/skills/changelog.md`），了解当前进展和下一步方向。**不需要扫所有 changelog，只读最新一篇**。读完后**必须执行 `git branch --show-current`** 检查当前分支，若与 changelog 中记录的分支不一致，提醒用户切换；**若一致，直接进入下一步工作，不再提示未提交文件**
+10. 切换分支前，**必须先执行 `git status`** 检查未提交的改动。如有未提交文件，列出文件清单，询问用户：是先 commit 再切，还是直接切（改动会带过去）。用户回复「1」即同意推荐方案
 
 ---
 
@@ -31,6 +33,7 @@
 | 部署上线、环境配置、迁移 | `.claude/skills/deploy.md` → 结合 `gstack: /cso /ship` |
 | 代码审查（任意场景） | `gstack: /review` |
 | 并行子任务开发（多模块同步） | `superpowers: subagent-driven-development` |
+| 写 changelog、读 changelog、更新进度 | `.claude/skills/changelog.md` |
 
 ---
 
@@ -42,4 +45,5 @@
 - LLM：`gpt-4o`（主推理）/ `gpt-4o-mini`（轻量任务）
 - 爬取：Firecrawl | 搜索：Tavily API | 数据库：PostgreSQL + pgvector
 - 包管理：**uv**（后端，Python 3.12，`pyproject.toml` + `uv sync`）/ **pnpm**（前端）
+- 测试：**pytest** + pytest-asyncio + httpx
 - 目录：`backend/`（FastAPI + Alembic）/ `frontend/`（Next.js）/ `dev.sh`（一键启动）

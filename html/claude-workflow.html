@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Intel Agent · .claude 执行指南</title>
+  <style>
+    :root {
+      --bg: #070c1a;
+      --surface: #0f1629;
+      --card: #141d32;
+      --border: #1e2d4a;
+      --text: #dde4f0;
+      --muted: #7a8ca8;
+      --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      padding: 56px 48px 40px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .site-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 80% at 10% 50%, rgba(99,102,241,.07) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 90% 20%, rgba(6,182,212,.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #6366f1;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      color: #f0f4ff;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: #6366f1;
+    }
+
+    .header-sub {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* ── Sticky Nav ── */
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7, 12, 26, .9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .sticky-nav::-webkit-scrollbar { display: none; }
+
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 12px 14px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color .2s, border-color .2s;
+    }
+    .nav-pill:hover { color: var(--text); border-bottom-color: var(--text); }
+
+    .nav-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Main ── */
+    .main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 48px 48px 96px;
+    }
+
+    /* ── Section ── */
+    .section { margin-bottom: 64px; }
+
+    .section-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      color: #f0f4ff;
+      margin-bottom: 4px;
+    }
+
+    .section-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Routing Table ── */
+    .routing-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .routing-table thead th {
+      background: var(--surface);
+      padding: 11px 18px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .routing-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .routing-table tbody tr:last-child { border-bottom: none; }
+    .routing-table tbody tr:hover { background: rgba(99,102,241,.04); }
+
+    .routing-table td {
+      padding: 13px 18px;
+      vertical-align: middle;
+    }
+
+    .trigger-text { font-size: 13px; color: var(--text); }
+
+    .skill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .tool-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tool-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 10px;
+      background: rgba(99,102,241,.1);
+      color: #a5b4fc;
+      border: 1px solid rgba(99,102,241,.2);
+      white-space: nowrap;
+    }
+
+    /* ── Skill Cards ── */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 820px) { .skills-grid { grid-template-columns: 1fr; } }
+
+    .skill-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform .2s, border-color .25s, box-shadow .25s;
+    }
+    .skill-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.4);
+    }
+
+    .skill-card-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .skill-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .skill-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f0f4ff;
+      letter-spacing: -.01em;
+    }
+    .skill-card-file {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .skill-card-body { padding: 18px 20px; }
+
+    /* ── Steps ── */
+    .steps { list-style: none; display: flex; flex-direction: column; }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      position: relative;
+      padding-bottom: 12px;
+    }
+    .step:last-child { padding-bottom: 0; }
+
+    .step:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 24px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-top: 1px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-content {
+      font-size: 12.5px;
+      color: var(--text);
+      padding-top: 2px;
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(255,255,255,.06);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #a5b4fc;
+    }
+
+    /* ── Forbidden ── */
+    .forbidden-list {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .forbidden-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      background: rgba(239,68,68,.07);
+      border: 1px solid rgba(239,68,68,.18);
+      color: #f87171;
+    }
+
+    /* ── Flow Nodes ── */
+    .flow-nodes { display: flex; flex-direction: column; gap: 5px; }
+
+    .flow-node {
+      display: flex;
+      gap: 8px;
+      font-size: 12.5px;
+      align-items: flex-start;
+    }
+    .flow-arrow { color: var(--muted); flex-shrink: 0; line-height: 1.5; }
+
+    .hitl-badge {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 10px;
+      background: rgba(245,158,11,.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245,158,11,.2);
+      margin-right: 4px;
+    }
+
+    /* ── Entry Routing Table ── */
+    .entry-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+    .entry-table td {
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(30,45,74,.6);
+    }
+    .entry-table tr:last-child td { border-bottom: none; }
+    .entry-table td:first-child { color: var(--muted); width: 38%; }
+    .entry-table td:last-child { font-family: var(--mono); font-size: 11px; color: #a5b4fc; }
+
+    /* ── Gate Box ── */
+    .gate-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .gate-label { color: var(--muted); font-size: 10px; margin-bottom: 6px; }
+
+    .gate-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 2px 0;
+    }
+    .gate-key { color: #fbbf24; font-weight: 700; width: 28px; flex-shrink: 0; }
+    .gate-action { color: var(--text); }
+
+    /* ── TDD Pills ── */
+    .tdd-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .tdd-pill {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 7px;
+    }
+    .tdd-pill-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .tdd-pill-desc {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ── Layer Table ── */
+    .layer-row {
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(30,45,74,.5);
+      font-size: 12px;
+    }
+    .layer-row:last-child { border-bottom: none; }
+    .layer-scope { color: var(--muted); }
+    .layer-tool {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    /* ── Checklist ── */
+    .check-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .check-item .ci { flex-shrink: 0; margin-top: 1px; }
+    .warn {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #fbbf24;
+      margin-left: 4px;
+    }
+
+    /* ── Design Thinking Grid ── */
+    .dt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .dt-cell {
+      padding: 9px 11px;
+      background: var(--surface);
+      border-radius: 7px;
+      border: 1px solid var(--border);
+    }
+    .dt-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .dt-val { font-size: 12px; color: var(--text); }
+
+    /* ── Aesthetic Tags ── */
+    .ae-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+    .ae-tag {
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* ── Docker Steps ── */
+    .docker-steps {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .docker-step {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .docker-step-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ── Constraints ── */
+    .constraints-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 820px) { .constraints-grid { grid-template-columns: 1fr; } }
+
+    .constraint-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      transition: border-color .2s;
+    }
+    .constraint-card:hover { border-color: rgba(99,102,241,.4); }
+
+    .constraint-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #6366f1;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .constraint-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f0f4ff;
+      margin-bottom: 5px;
+    }
+    .constraint-text { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 56px 0;
+    }
+
+    /* ── Footer ── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp .45s cubic-bezier(.22,.68,0,1.2) both; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-eyebrow">// .claude / 执行手册</div>
+    <h1>Job Intel Agent <em>·</em> .claude 执行指南</h1>
+    <p class="header-sub">所有 Skill 的触发条件、执行步骤与禁止事项。遵循 CLAUDE.md 约束，按场景查表找对应 Skill。</p>
+  </header>
+
+  <nav class="sticky-nav">
+    <a href="#routing"      class="nav-pill"><span class="nav-dot" style="background:#6366f1"></span>路由表</a>
+    <a href="#product"      class="nav-pill"><span class="nav-dot" style="background:#06b6d4"></span>产品定位</a>
+    <a href="#spec"         class="nav-pill"><span class="nav-dot" style="background:#a78bfa"></span>Spec</a>
+    <a href="#feature-dev"  class="nav-pill"><span class="nav-dot" style="background:#60a5fa"></span>功能开发</a>
+    <a href="#bug-fix"      class="nav-pill"><span class="nav-dot" style="background:#f87171"></span>Bug 修复</a>
+    <a href="#testing"      class="nav-pill"><span class="nav-dot" style="background:#34d399"></span>测试</a>
+    <a href="#frontend"     class="nav-pill"><span class="nav-dot" style="background:#fbbf24"></span>前端开发</a>
+    <a href="#deploy"       class="nav-pill"><span class="nav-dot" style="background:#818cf8"></span>部署</a>
+    <a href="#html-design"  class="nav-pill"><span class="nav-dot" style="background:#2dd4bf"></span>HTML 设计</a>
+    <a href="#html-gif"     class="nav-pill"><span class="nav-dot" style="background:#f472b6"></span>录屏→GIF</a>
+    <a href="#constraints"  class="nav-pill"><span class="nav-dot" style="background:#f59e0b"></span>项目约束</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- ═══ Routing Table ═══ -->
+    <section class="section" id="routing">
+      <div class="section-eyebrow">// 核心入口</div>
+      <div class="section-title">Skill 路由表</div>
+      <div class="section-desc">遇到以下情境，主动读取对应 Skill 文件并按其规范执行。点击行跳转至详情。</div>
+
+      <table class="routing-table">
+        <thead>
+          <tr>
+            <th style="width:40%">触发情境</th>
+            <th style="width:22%">Skill 文件</th>
+            <th>结合工具</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="scrollTo('product')">
+            <td><div class="trigger-text">讨论产品方向、功能边界、用户价值、竞品对比</div></td>
+            <td><span class="skill-badge" style="color:#06b6d4;border:1px solid rgba(6,182,212,.3);background:rgba(6,182,212,.07)">product.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">brainstorming</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('feature-dev')">
+            <td><div class="trigger-text">开发新功能、新 API、新模块</div></td>
+            <td><span class="skill-badge" style="color:#60a5fa;border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.07)">feature-dev.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">writing-plans</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('bug-fix')">
+            <td><div class="trigger-text">修复 Bug、排查问题、分析报错</div></td>
+            <td><span class="skill-badge" style="color:#f87171;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.07)">bug-fix.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">gstack /investigate</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('testing')">
+            <td><div class="trigger-text">编写测试、输出测试报告</div></td>
+            <td><span class="skill-badge" style="color:#34d399;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07)">testing.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">tdd</span><span class="tool-tag">gstack /qa</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('frontend')">
+            <td><div class="trigger-text">前端 UI 开发、页面验证、设计审计</div></td>
+            <td><span class="skill-badge" style="color:#fbbf24;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07)">frontend.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">gstack /browse</span><span class="tool-tag">/qa</span><span class="tool-tag">/design-review</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('deploy')">
+            <td><div class="trigger-text">部署上线、环境配置、迁移</div></td>
+            <td><span class="skill-badge" style="color:#818cf8;border:1px solid rgba(129,140,248,.3);background:rgba(129,140,248,.07)">deploy.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">gstack /cso</span><span class="tool-tag">/ship</span></div></td>
+          </tr>
+          <tr>
+            <td><div class="trigger-text">代码审查（任意场景）</div></td>
+            <td><span class="skill-badge" style="color:#94a3b8;border:1px solid rgba(148,163,184,.3);background:rgba(148,163,184,.07)">—</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">gstack /review</span></div></td>
+          </tr>
+          <tr>
+            <td><div class="trigger-text">并行子任务开发（多模块同步）</div></td>
+            <td><span class="skill-badge" style="color:#fb923c;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.07)">—</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">subagent-driven-dev</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('html-design')">
+            <td><div class="trigger-text">生成独立 HTML 文件、视觉作品、落地页</div></td>
+            <td><span class="skill-badge" style="color:#2dd4bf;border:1px solid rgba(45,212,191,.3);background:rgba(45,212,191,.07)">frontend-design.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">—</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('html-gif')">
+            <td><div class="trigger-text">HTML 录屏转 GIF / 视频</div></td>
+            <td><span class="skill-badge" style="color:#f472b6;border:1px solid rgba(244,114,182,.3);background:rgba(244,114,182,.07)">html-to-gif.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">Playwright</span><span class="tool-tag">ffmpeg</span></div></td>
+          </tr>
+          <tr onclick="scrollTo('spec')">
+            <td><div class="trigger-text">设计新功能 Spec 文档（新功能/API/模块前必读）</div></td>
+            <td><span class="skill-badge" style="color:#a78bfa;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.07)">spec.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">—</span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══ Skill Detail Cards ═══ -->
+    <section class="section">
+      <div class="section-eyebrow">// Skill 详情</div>
+      <div class="section-title">各 Skill 执行流程</div>
+      <div class="section-desc">触发条件、执行步骤、禁止事项一览</div>
+
+      <div class="skills-grid">
+
+        <!-- ── 产品定位 ── -->
+        <div class="skill-card" id="product">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(6,182,212,.12)">🎯</div>
+            <div>
+              <div class="skill-card-title">产品定位</div>
+              <div class="skill-card-file">product.md + brainstorming</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">一句话定位</div>
+            <p style="font-size:13px;color:var(--text);margin-bottom:16px;padding:10px 12px;background:var(--surface);border-radius:7px;border-left:2px solid #06b6d4;line-height:1.6">
+              粘贴 JD 链接 + 上传简历，AI Agent 自主完成公司调研，<strong>3-5 分钟</strong>生成专属面试情报报告。
+            </p>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">核心流程</div>
+            <div class="flow-nodes">
+              <div class="flow-node"><span class="flow-arrow">→</span><span>粘贴 JD 链接 + 上传简历</span></div>
+              <div class="flow-node"><span class="flow-arrow">→</span><span>Agent 自动爬取解析 JD</span></div>
+              <div class="flow-node"><span class="flow-arrow">→</span><span><span class="hitl-badge">HitL</span>确认职位名 / 公司名 / 核心要求</span></div>
+              <div class="flow-node"><span class="flow-arrow">→</span><span><span class="hitl-badge">HitL</span>选择研究方向</span></div>
+              <div class="flow-node"><span class="flow-arrow">→</span><span>Agent 自主多步调研</span></div>
+              <div class="flow-node"><span class="flow-arrow">→</span><span>生成个性化报告（6 模块）</span></div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin:12px 0 6px">报告 6 模块</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">职位解读</span>
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">简历匹配度</span>
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">公司画像</span>
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">面试题预测</span>
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">薪资参考</span>
+              <span style="padding:2px 7px;border-radius:4px;font-size:11px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);color:#67e8f9">备战建议</span>
+            </div>
+
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 一键投递简历</span>
+              <span class="forbidden-tag">✕ 面试中实时辅助</span>
+              <span class="forbidden-tag">✕ 简历生成与修改</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Spec ── -->
+        <div class="skill-card" id="spec">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(167,139,250,.12)">📐</div>
+            <div>
+              <div class="skill-card-title">Spec 设计文档</div>
+              <div class="skill-card-file">spec.md · 新功能/API/模块前必读</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <ul class="steps">
+              <li class="step"><span class="step-num">1</span><span class="step-content">读取项目上下文（相关文件、最近 commit、现有模型/接口）</span></li>
+              <li class="step"><span class="step-num">2</span><span class="step-content">头脑风暴：提出 2-3 方案 + 每个方案的风险 + 推荐</span></li>
+              <li class="step"><span class="step-num">3</span><span class="step-content">用户确认方案</span></li>
+              <li class="step"><span class="step-num">4</span><span class="step-content">写 spec 文件 → <code>docs/specs/YYYY-MM-DD-&lt;feature&gt;/spec.md</code></span></li>
+              <li class="step"><span class="step-num">5</span><span class="step-content">生成流程图 → <code>flow.html</code>（自包含，可直接浏览器打开）</span></li>
+              <li class="step"><span class="step-num">6</span><span class="step-content">展示 spec 路径，等待用户 review</span></li>
+              <li class="step"><span class="step-num">7</span><span class="step-content">用户确认后 → 转入 <code>feature-dev.md</code></span></li>
+            </ul>
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 跳过 spec 直接写代码</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 功能开发 ── -->
+        <div class="skill-card" id="feature-dev">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(96,165,250,.12)">⚙️</div>
+            <div>
+              <div class="skill-card-title">功能开发（完整闭环）</div>
+              <div class="skill-card-file">feature-dev.md + writing-plans</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">入口路由</div>
+            <table class="entry-table">
+              <tr><td>业务不确定</td><td>brainstorming → 完整 spec → task 文件</td></tr>
+              <tr><td>业务已确定</td><td>精简 spec（5 min）→ task 文件</td></tr>
+              <tr><td>Bug 修复</td><td>task 文件（直接，spec: none）</td></tr>
+              <tr><td>重构</td><td>精简 spec → task 文件（含回归测试）</td></tr>
+              <tr><td>Hotfix</td><td>询问目标分支 → task 文件</td></tr>
+            </table>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">验证完成后展示 Gate</div>
+            <div class="gate-box">
+              <div class="gate-label">✅ 测试通过 &nbsp; ✅ 审查无阻断项 &nbsp; Changelog 已更新</div>
+              <div class="gate-row"><span class="gate-key">「1」</span><span class="gate-action">commit + push</span></div>
+              <div class="gate-row"><span class="gate-key">「2」</span><span class="gate-action">仅 commit，稍后 push</span></div>
+              <div class="gate-row"><span class="gate-key">「3」</span><span class="gate-action">继续修改</span></div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin:12px 0 4px">Task 文件路径</div>
+            <code>.claude/tasks/YYYY-MM-DD-&lt;feature&gt;.md</code>
+          </div>
+        </div>
+
+        <!-- ── Bug 修复 ── -->
+        <div class="skill-card" id="bug-fix">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(248,113,113,.12)">🐛</div>
+            <div>
+              <div class="skill-card-title">Bug 修复</div>
+              <div class="skill-card-file">bug-fix.md + gstack /investigate</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <ul class="steps">
+              <li class="step"><span class="step-num">1</span><span class="step-content">根因分析 <code>gstack /investigate</code>：生成 ≥3 个假设，逐一验证</span></li>
+              <li class="step"><span class="step-num">2</span><span class="step-content">定位 & 复现：必须稳定复现，记录复现步骤</span></li>
+              <li class="step"><span class="step-num">3</span><span class="step-content">修复：只改最小必要范围，立即跑受影响测试</span></li>
+              <li class="step"><span class="step-num">4</span><span class="step-content">输出 TODO 清单 + 测试报告</span></li>
+              <li class="step"><span class="step-num">5</span><span class="step-content">更新 <code>changelogs/YYYY-MM-DD.md</code></span></li>
+              <li class="step"><span class="step-num">6</span><span class="step-content">等待用户回复「1」</span></li>
+              <li class="step"><span class="step-num">7</span><span class="step-content">commit → push</span></li>
+            </ul>
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 看到报错直接改代码</span>
+              <span class="forbidden-tag">✕ 只改表象不追根因</span>
+              <span class="forbidden-tag">✕ 跳过 hook 提交</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 测试 ── -->
+        <div class="skill-card" id="testing">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(52,211,153,.12)">🧪</div>
+            <div>
+              <div class="skill-card-title">测试</div>
+              <div class="skill-card-file">testing.md + tdd + gstack /qa</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">TDD 循环（强制执行）</div>
+            <div class="tdd-row">
+              <div class="tdd-pill" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)">
+                <div class="tdd-pill-label" style="color:#f87171">RED</div>
+                <div class="tdd-pill-desc">先写失败测试</div>
+              </div>
+              <div class="tdd-pill" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2)">
+                <div class="tdd-pill-label" style="color:#34d399">GREEN</div>
+                <div class="tdd-pill-desc">最小实现通过</div>
+              </div>
+              <div class="tdd-pill" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2)">
+                <div class="tdd-pill-label" style="color:#818cf8">REFACTOR</div>
+                <div class="tdd-pill-desc">保绿优化代码</div>
+              </div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">测试分层</div>
+            <div class="layer-row"><span style="font-weight:600">单元测试</span><span class="layer-scope">services/ 业务逻辑</span><span class="layer-tool">pytest</span></div>
+            <div class="layer-row"><span style="font-weight:600">集成测试</span><span class="layer-scope">API 路由 + DB</span><span class="layer-tool">pytest + httpx</span></div>
+            <div class="layer-row"><span style="font-weight:600">E2E 测试</span><span class="layer-scope">完整用户流程</span><span class="layer-tool">gstack</span></div>
+
+            <div style="font-size:11px;color:var(--muted);margin:12px 0 6px">E2E 必测场景</div>
+            <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px">
+              <span>→ JobInputForm 提交流程（粘贴 JD URL → 爬取 → 进度流）</span>
+              <span>→ 简历上传（拖拽 PDF → 解析 → 成功反馈）</span>
+              <span>→ HitL 确认弹窗（职位确认 → 方向选择）</span>
+              <span>→ ReportCard 六模块完整渲染</span>
+              <span>→ 三态验证：loading / error / empty</span>
+            </div>
+
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 先写实现再补测试</span>
+              <span class="forbidden-tag">✕ 有 ❌ 继续推进</span>
+              <span class="forbidden-tag">✕ mock 核心外部依赖集成测试</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 前端开发 ── -->
+        <div class="skill-card" id="frontend">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(251,191,36,.12)">🖥️</div>
+            <div>
+              <div class="skill-card-title">前端开发（Next.js）</div>
+              <div class="skill-card-file">frontend.md + gstack 三件套</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <ul class="steps">
+              <li class="step"><span class="step-num">1</span><span class="step-content">头脑风暴：布局方案 + 交互状态（loading / empty / error / success）+ 响应式断点</span></li>
+              <li class="step"><span class="step-num">2</span><span class="step-content">实现组件（Tailwind CSS，组件放 <code>src/components/</code>，页面放 <code>src/app/</code>）</span></li>
+              <li class="step">
+                <span class="step-num">3</span>
+                <span class="step-content">
+                  gstack 验证三件套<br>
+                  <div style="display:flex;flex-direction:column;gap:4px;margin-top:7px">
+                    <div style="display:flex;gap:8px;align-items:center"><code>gstack /browse</code><span style="font-size:11px;color:var(--muted)">视觉确认 mobile + desktop</span></div>
+                    <div style="display:flex;gap:8px;align-items:center"><code>gstack /qa</code><span style="font-size:11px;color:var(--muted)">自动化测试，发现 bug 自动修到全绿</span></div>
+                    <div style="display:flex;gap:8px;align-items:center"><code>gstack /design-review</code><span style="font-size:11px;color:var(--muted)">评分 &lt; 7 须修复再提交</span></div>
+                  </div>
+                </span>
+              </li>
+              <li class="step"><span class="step-num">4</span><span class="step-content">TODO 清单 + 截图证据</span></li>
+              <li class="step"><span class="step-num">5</span><span class="step-content">等待「1」→ commit</span></li>
+            </ul>
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 跳过 gstack 直接 commit</span>
+              <span class="forbidden-tag">✕ 只做 happy path</span>
+              <span class="forbidden-tag">✕ 内联 style 覆盖 Tailwind</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 部署 ── -->
+        <div class="skill-card" id="deploy">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(129,140,248,.12)">🚀</div>
+            <div>
+              <div class="skill-card-title">部署上线</div>
+              <div class="skill-card-file">deploy.md + gstack /cso /ship</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Docker 启动顺序</div>
+            <div class="docker-steps">
+              <div class="docker-step"><span class="docker-step-num">1</span><span>postgres + redis</span></div>
+              <div style="display:flex;align-items:center;color:var(--muted);font-size:12px">→</div>
+              <div class="docker-step"><span class="docker-step-num">2</span><code>alembic upgrade head</code></div>
+              <div style="display:flex;align-items:center;color:var(--muted);font-size:12px">→</div>
+              <div class="docker-step"><span class="docker-step-num">3</span><span>FastAPI backend</span></div>
+              <div style="display:flex;align-items:center;color:var(--muted);font-size:12px">→</div>
+              <div class="docker-step"><span class="docker-step-num">4</span><span>celery worker</span></div>
+              <div style="display:flex;align-items:center;color:var(--muted);font-size:12px">→</div>
+              <div class="docker-step"><span class="docker-step-num">5</span><span>Next.js frontend</span></div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">部署前 Checklist</div>
+            <ul class="check-list">
+              <li class="check-item"><span class="ci">□</span><span>环境变量已配置（对照 .env.example）<span class="warn">⚠️ 缺 Key 静默失败</span></span></li>
+              <li class="check-item"><span class="ci">□</span><span>Alembic migration 已生成并 review</span></li>
+              <li class="check-item"><span class="ci">□</span><span>测试报告全部 ✅</span></li>
+              <li class="check-item"><span class="ci">□</span><span><code>gstack /cso</code> 安全审计置信度 ≥ 8/10<span class="warn">⚠️ OWASP Top 10</span></span></li>
+              <li class="check-item"><span class="ci">□</span><span>用户回复「1」确认</span></li>
+            </ul>
+
+            <div style="font-size:11px;color:var(--muted);margin:12px 0 4px">回滚命令</div>
+            <code>alembic downgrade -1</code>&nbsp;&nbsp;<span style="font-size:11px;color:var(--muted)">/ 指定 revision_id</span>
+
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 跳过 migration 启动 backend</span>
+              <span class="forbidden-tag">✕ 直接改表结构</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── HTML 设计 ── -->
+        <div class="skill-card" id="html-design">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(45,212,191,.12)">🎨</div>
+            <div>
+              <div class="skill-card-title">前端视觉设计（独立 HTML）</div>
+              <div class="skill-card-file">frontend-design.md · 自包含 HTML 文件</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Design Thinking 四问（编码前必答）</div>
+            <div class="dt-grid">
+              <div class="dt-cell"><div class="dt-label">PURPOSE</div><div class="dt-val">解决什么问题？谁会使用？</div></div>
+              <div class="dt-cell"><div class="dt-label">TONE</div><div class="dt-val">选择极致风格并贯彻到底</div></div>
+              <div class="dt-cell"><div class="dt-label">CONSTRAINTS</div><div class="dt-val">技术 / 性能 / 无障碍要求</div></div>
+              <div class="dt-cell"><div class="dt-label">DIFFERENTIATION</div><div class="dt-val">什么让设计令人难忘？</div></div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">美学五要素</div>
+            <div class="ae-tags">
+              <span class="ae-tag" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf">Typography</span>
+              <span class="ae-tag" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf">Color &amp; Theme</span>
+              <span class="ae-tag" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf">Motion</span>
+              <span class="ae-tag" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf">Spatial Composition</span>
+              <span class="ae-tag" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf">Backgrounds &amp; Texture</span>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">产物规范</div>
+            <p style="font-size:12.5px;color:var(--text)">单个自包含 HTML 文件，内联 CSS + JS，无外部依赖，直接浏览器打开</p>
+
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 泛滥字体（Inter / Arial）</span>
+              <span class="forbidden-tag">✕ 白底紫渐变 AI 风格</span>
+              <span class="forbidden-tag">✕ 可预测的模板布局</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 录屏转 GIF ── -->
+        <div class="skill-card" id="html-gif">
+          <div class="skill-card-header">
+            <div class="skill-icon" style="background:rgba(244,114,182,.12)">🎬</div>
+            <div>
+              <div class="skill-card-title">HTML 录屏转 GIF</div>
+              <div class="skill-card-file">html-to-gif.md · Playwright + ffmpeg</div>
+            </div>
+          </div>
+          <div class="skill-card-body">
+            <ul class="steps">
+              <li class="step"><span class="step-num">1</span><span class="step-content">与用户确认：录制范围、各屏停留时长、总时长、触发交互、输出格式</span></li>
+              <li class="step"><span class="step-num">2</span><span class="step-content">编写 Playwright 脚本（<code>recordVideo</code>，绝对路径，viewport ≥ 1280×720）</span></li>
+              <li class="step"><span class="step-num">3</span><span class="step-content">执行脚本，生成 <code>.webm</code> 视频（<code>browser.close()</code> 后才写入磁盘）</span></li>
+              <li class="step">
+                <span class="step-num">4</span>
+                <span class="step-content">
+                  ffmpeg 转 GIF<br>
+                  <code style="font-size:10px;display:block;margin-top:5px;line-height:1.7">fps=12, scale=900:-1, max_colors=128, dither=bayer:bayer_scale=3</code>
+                </span>
+              </li>
+              <li class="step"><span class="step-num">5</span><span class="step-content">验证 GIF：目标 &lt; 5MB，动画流畅，关键帧完整</span></li>
+            </ul>
+            <div style="font-size:11px;color:var(--muted);margin:12px 0 4px">体积优化参数</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div style="padding:6px 8px;background:var(--surface);border-radius:5px;font-size:11px"><span style="color:var(--muted)">fps</span><br><code>8–12</code></div>
+              <div style="padding:6px 8px;background:var(--surface);border-radius:5px;font-size:11px"><span style="color:var(--muted)">scale</span><br><code>700–900px</code></div>
+              <div style="padding:6px 8px;background:var(--surface);border-radius:5px;font-size:11px"><span style="color:var(--muted)">colors</span><br><code>64–128</code></div>
+            </div>
+            <div class="forbidden-list">
+              <span class="forbidden-tag">✕ 跳过时间线确认录制</span>
+              <span class="forbidden-tag">✕ 截图逐帧拼接</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══ Project Constraints ═══ -->
+    <section class="section" id="constraints">
+      <div class="section-eyebrow">// 全局约束</div>
+      <div class="section-title">项目约束（始终生效，任何情况不可跳过）</div>
+      <div class="section-desc">违反视为严重问题</div>
+
+      <div class="constraints-grid">
+
+        <div class="constraint-card">
+          <div class="constraint-num">#1 &nbsp;LLM 调用层级</div>
+          <div class="constraint-title">services/ 层唯一调用点</div>
+          <div class="constraint-text">LLM 调用只在 <code>services/</code> 层，<code>api/</code> 层禁止直接调用</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#2 &nbsp;实时状态</div>
+          <div class="constraint-title">SSE + Redis Pub/Sub</div>
+          <div class="constraint-text">实时状态用 SSE + Redis Pub/Sub，<strong>禁止轮询</strong></div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#3 &nbsp;数据库变更</div>
+          <div class="constraint-title">必须走 Alembic</div>
+          <div class="constraint-text">数据库变更必须走 Alembic 迁移，禁止直接修改表结构</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#4 &nbsp;ORM 变更三步</div>
+          <div class="constraint-title">models/ 变更前 commit 必须</div>
+          <div class="constraint-text">
+            ① <code>alembic revision --autogenerate</code> 已执行并 review<br>
+            ② <code>alembic upgrade head</code> 本地运行成功<br>
+            ③ 迁移文件已纳入本次 commit
+          </div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#5 &nbsp;开发环境</div>
+          <div class="constraint-title">./dev.sh 一键启动</div>
+          <div class="constraint-text">本地开发通过 <code>./dev.sh</code> 启动（Docker 跑 postgres + redis，其余服务在本机跑）。新增/删除服务必须同步更新 dev.sh</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#6 &nbsp;会话扫描</div>
+          <div class="constraint-title">每次会话必查未完成任务</div>
+          <div class="constraint-text">每次会话开始，扫描 <code>.claude/tasks/</code>，若有 Gate 未全部 ✅ 的任务，第一条回复主动提示</div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span class="footer-text">job-intel-agent &nbsp;·&nbsp; .claude/CLAUDE.md &nbsp;+&nbsp; skills/</span>
+      <span class="footer-text">2026-05-14</span>
+    </footer>
+
+  </main>
+
+  <script>
+    function scrollTo(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Scroll-reveal animation
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, i) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add('animate-in');
+              entry.target.style.opacity = '';
+            }, i * 60);
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+
+    document.querySelectorAll('.skill-card, .constraint-card, .routing-table').forEach(el => {
+      el.style.opacity = '0';
+      revealObserver.observe(el);
+    });
+
+    // Active nav highlight
+    const allSections = document.querySelectorAll('[id]');
+    const allNavPills = document.querySelectorAll('.nav-pill');
+
+    const navObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            allNavPills.forEach(pill => {
+              const active = pill.getAttribute('href') === '#' + id;
+              pill.style.color = active ? '#f0f4ff' : '';
+              pill.style.borderBottomColor = active ? '#f0f4ff' : '';
+            });
+          }
+        });
+      },
+      { threshold: 0.25, rootMargin: '-80px 0px -60% 0px' }
+    );
+
+    allSections.forEach(s => navObserver.observe(s));
+  </script>
+</body>
+</html>
