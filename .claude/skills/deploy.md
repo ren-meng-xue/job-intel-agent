@@ -55,18 +55,29 @@ S3_BUCKET_NAME=
 
 ## 数据库迁移规范
 
+**触发时机：** commit 前，若新增或修改了 ORM 模型（`models/` 下任意文件），必须完成以下步骤。
+
+### 步骤
+
 ```bash
-# 生成迁移文件
+# 1. 生成迁移文件
 alembic revision --autogenerate -m "描述"
 
-# 迁移前必须 review 生成的文件，确认无误
-# 再执行
+# 2. review 生成的迁移文件，确认表/字段与模型一致
+
+# 3. 本地运行迁移
 alembic upgrade head
+
+# 4. 迁移文件纳入本次 commit
+git add backend/alembic/versions/<新迁移文件>
 ```
 
+### 约束
+
 - 禁止直接修改数据库表结构
-- 禁止删除迁移文件
-- 每次迁移必须可回滚（检查 downgrade() 函数）
+- 禁止删除已有迁移文件
+- 每次迁移必须可回滚（检查 `downgrade()` 函数）
+- 以上 4 步全部完成且通过后才能 commit
 
 ---
 

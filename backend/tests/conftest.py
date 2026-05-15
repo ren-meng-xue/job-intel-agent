@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 import app.models.auth_session  # noqa: F401
 import app.models.job  # noqa: F401
 import app.models.report  # noqa: F401
+import app.models.resume  # noqa: F401
 import app.models.user  # noqa: F401
 from app.core.database import Base, get_db
 from app.main import app
