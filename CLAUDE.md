@@ -10,25 +10,12 @@
    - push 完成后，若当前分支非 main/master，询问用户是否需要合并到 main
 4. LLM 调用只在 `services/` 层，`api/` 层禁止直接调用
 5. 实时状态用 SSE + Redis Pub/Sub，**禁止轮询**
-6. 数据库变更必须走 Alembic，禁止直接改表结构
-7. commit 前，若新增或修改了 ORM 模型（`models/` 下任意文件），必须完成：
-   - `alembic revision --autogenerate -m "描述"` 已执行并 review
-   - `alembic upgrade head` 本地运行成功（表/字段与模型一致）
-   - 迁移文件已纳入本次 commit
-8. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
-9. 每次会话开始时，以及用户说「todo」或询问下一步时，按顺序执行：
-   a. 读取 `changelogs/` 下日期最新的 `.md` 文件，了解当前进展
-   b. 执行 `git branch --show-current`，若与 changelog 记录分支不一致，提醒用户切换
-   c. 若 changelog todo 有内容 → 列出待办，询问从哪条开始
-   d. 若 changelog todo 为空 → 主动读取 `docs/superpowers/plans/` 下最新的计划文件，提议下一步任务；若无计划文件则询问用户意图
-10. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
-11. 每次 commit 前，必须先更新最新 changelog：
-    - spec 相关：删除已完成的 todo 条目（todo 清空则删整块），在 spec 组末尾追加 `**commit message**` + done 条目
-    - 非 spec（chore/fix/docs）：在分支块末尾追加 `================================================================================` + `**commit message**` + done 列表
-    - 若当天无 changelog 则新建
-14. 开发顺序：先写实现代码，实现完成后再写测试并运行通过。不使用"先写失败测试"的 TDD 流程
-12. 当用户要求开发新功能、新 Phase 或新模块时，制定计划前必须先执行 `git branch --show-current`。若当前在 `main` 且本次开发应在独立 feature 分支上，提示用户创建或切换到对应分支，等待确认后再继续
-13. 完成计划文档后，在当天 changelog 的分支块末尾追加 `================================================================================` + 新 spec 组，写入 spec 路径和所有任务到 todo（用描述性名称，不用 Task N 编号）。若无分支块则先创建
+6. 数据库变更必须走 Alembic，禁止直接改表结构；ORM 模型变更后的迁移步骤见 `.claude/skills/deploy.md`
+7. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
+8. 会话开始 / 用户说「todo」时的流程、changelog 读写与更新规则，见 `.claude/skills/changelog.md`
+9. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
+10. 开发顺序：先写实现代码，实现完成后再写测试并运行通过。不使用"先写失败测试"的 TDD 流程
+11. 当用户要求开发新功能、新 Phase 或新模块时，制定计划前必须先执行 `git branch --show-current`。若当前在 `main` 且本次开发应在独立 feature 分支上，提示用户创建或切换到对应分支，等待确认后再继续
 
 ---
 
@@ -57,6 +44,6 @@
 - 前端：Next.js + TypeScript + Tailwind CSS
 - LLM：`gpt-4o`（主推理）/ `gpt-4o-mini`（轻量任务）
 - 爬取：Firecrawl | 搜索：Tavily API | 数据库：PostgreSQL + pgvector
-- 包管理：**uv**（后端，Python 3.12，`pyproject.toml` + `uv sync`）/ **pnpm**（前端）
+- 包管理：**uv**（后端，Python 3.12，`pyproject.toml` + `uv sync`）/ **pnpm**（前端）；后端所有命令必须加 `uv run` 前缀（如 `uv run alembic`、`uv run pytest`），直接调用会因 pyenv 找不到 3.12 而报错
 - 测试：**pytest** + pytest-asyncio + httpx
 - 目录：`backend/`（FastAPI + Alembic）/ `frontend/`（Next.js）/ `dev.sh`（一键启动）

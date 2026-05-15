@@ -14,8 +14,8 @@
 
 | 操作 | 路径 | 职责 |
 |------|------|------|
-| Modify | `backend/app/models/job.py` | 新增 user_id FK、resume_id、requirements JSON、jd_summary Text、selected_directions JSON |
-| Modify | `backend/app/schemas/job.py` | 新增 ExtractedJobInfo；更新 JobCreate（+resume_id）、JobResponse（+title/company） |
+| Modify | `backend/app/models/job.py` | 新增 user_id FK、resume_id、requirements JSON、jd_summary Text、selected_directions JSON、salary_range、location、work_type |
+| Modify | `backend/app/schemas/job.py` | 新增 ExtractedJobInfo（含 salary_range/location/work_type）；更新 JobCreate（+resume_id）、JobResponse |
 | Create | `backend/app/repositories/job_repository.py` | Job 表 CRUD：create_job / get_by_id / update_after_parse / update_status |
 | Modify | `backend/app/services/llm_service.py` | chat() 支持 **kwargs；新增 extract_job_info(markdown) → ExtractedJobInfo |
 | Modify | `backend/app/tasks/research.py` | 新增 task_parse_jd + _do_parse_jd；保留 run_research（留 Phase 2D） |
@@ -64,6 +64,9 @@ class Job(Base):
     company: Mapped[str | None] = mapped_column(String(256))
     requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)
     jd_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    salary_range: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    work_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     selected_directions: Mapped[list | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")
     created_at: Mapped[datetime] = mapped_column(
@@ -84,6 +87,9 @@ class ExtractedJobInfo(BaseModel):
     company: str
     requirements: list[str]
     jd_summary: str
+    salary_range: str | None = None
+    location: str | None = None
+    work_type: str | None = None
 
 
 class JobCreate(BaseModel):
@@ -97,6 +103,9 @@ class JobResponse(BaseModel):
     status: str
     title: str | None = None
     company: str | None = None
+    salary_range: str | None = None
+    location: str | None = None
+    work_type: str | None = None
 
     model_config = {"from_attributes": True}
 ```
@@ -245,6 +254,9 @@ class JobRepository:
         company: str,
         requirements: list[str],
         jd_summary: str,
+        salary_range: str | None = None,
+        location: str | None = None,
+        work_type: str | None = None,
     ) -> None:
         job = await self.get_by_id(job_id)
         if not job:
@@ -254,6 +266,9 @@ class JobRepository:
         job.company = company
         job.requirements = requirements
         job.jd_summary = jd_summary
+        job.salary_range = salary_range
+        job.location = location
+        job.work_type = work_type
         job.status = "awaiting_confirm"
         await self.session.commit()
 
@@ -394,6 +409,9 @@ async def extract_job_info(markdown: str) -> ExtractedJobInfo:
         '- "company": string (company name)\n'
         '- "requirements": array of strings (key requirements, max 10 items)\n'
         '- "jd_summary": string (2-3 sentence summary of the role)\n'
+        '- "salary_range": string or null (e.g. "15k-25k", "年薪30万", "$80K-120K"; null if not mentioned)\n'
+        '- "location": string or null (city/region, e.g. "北京", "Remote", "Shanghai"; null if not mentioned)\n'
+        '- "work_type": string or null ("remote", "hybrid", or "onsite"; null if not mentioned)\n'
         "Return only valid JSON, no markdown."
     )
     response_text = await chat(
@@ -478,6 +496,9 @@ async def test_do_parse_jd_updates_db_and_publishes_event():
         company="Acme",
         requirements=["Python", "FastAPI"],
         jd_summary="A great role at Acme.",
+        salary_range=None,
+        location=None,
+        work_type=None,
     )
     mock_redis.publish.assert_called_once()
     channel, payload_str = mock_redis.publish.call_args[0]
@@ -574,6 +595,9 @@ async def _do_parse_jd(job_id: str) -> None:
                 company=info.company,
                 requirements=info.requirements,
                 jd_summary=info.jd_summary,
+                salary_range=info.salary_range,
+                location=info.location,
+                work_type=info.work_type,
             )
 
         await redis.publish(
@@ -583,6 +607,9 @@ async def _do_parse_jd(job_id: str) -> None:
                 "title": info.title,
                 "company": info.company,
                 "requirements": info.requirements,
+                "salary_range": info.salary_range,
+                "location": info.location,
+                "work_type": info.work_type,
             }),
         )
     except Exception:
