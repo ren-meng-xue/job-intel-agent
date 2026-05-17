@@ -1,0 +1,4 @@
+Name: Test Candidate
+Experience: 5 years of Python development.
+Skills: FastAPI, React, Playwright.
+Education: Computer Science degree.
