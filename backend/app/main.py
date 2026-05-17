@@ -21,7 +21,7 @@ app = FastAPI(title="Job Intel Agent", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"https://[a-zA-Z0-9-]+-ren-meng-xues-projects\.vercel\.app",
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
