@@ -36,6 +36,7 @@ export default function AuthPage() {
   const [showRegPwd, setShowRegPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const asideRef = useRef<HTMLElement>(null)
   const charsRef = useRef<HTMLDivElement>(null)
@@ -132,7 +133,7 @@ export default function AuthPage() {
   }, [])
 
   function switchTab(t: 'login' | 'register') {
-    setTab(t); setError('')
+    setTab(t); setError(''); setSuccess('')
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -153,8 +154,10 @@ export default function AuthPage() {
     setError(''); setLoading(true)
     try {
       await register(email, username, password)
-      await login(email, password)
-      router.replace('/')
+      setUsername('')
+      setPassword('')
+      setSuccess('注册成功！请登录')
+      setTab('login')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -296,6 +299,11 @@ export default function AuthPage() {
             {error && (
               <p className="text-sm text-red-500 mb-4 text-center bg-red-50 rounded-lg py-2 px-3">
                 {error}
+              </p>
+            )}
+            {success && (
+              <p className="text-sm text-green-600 mb-4 text-center bg-green-50 rounded-lg py-2 px-3">
+                {success}
               </p>
             )}
 
