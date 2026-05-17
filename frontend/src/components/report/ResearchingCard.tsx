@@ -268,7 +268,7 @@ export default function ResearchingCard({ reportId, directions, onDone }: Props)
               <p className="font-semibold text-amber-800">报告草稿已就绪，请确认</p>
             </div>
             <p className="text-xs text-amber-600">
-              请预览下方报告草稿，满意后点击保存；如需重新调研可点击"重新分析"
+              请预览下方报告草稿，满意后点击保存；如需重新调研可点击&ldquo;重新分析&rdquo;
             </p>
           </div>
 
