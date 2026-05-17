@@ -9,9 +9,6 @@ Phase 2D bugfix 测试 — 覆盖 LangGraph 研究图修复的六个关键点
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-
 # ─────────────────────────────────────────────────────────────────
 # 1. get_research_graph 单例
 # ─────────────────────────────────────────────────────────────────
@@ -123,7 +120,6 @@ async def test_search_node_empty_directions_no_exception():
 
 async def _register_and_login_for_resume(client, suffix: str = "") -> dict:
     """注册并登录，返回 Auth header"""
-    from httpx import AsyncClient
     email = f"resume{suffix}@example.com"
     username = f"resumeuser{suffix}"
     await client.post(
@@ -280,7 +276,7 @@ def _make_run_research_mocks(action_data_json=None):
 
     mock_state = MagicMock()
     mock_state.values = {"current_step": "review_results", "human_feedback": []}
-    mock_state.next = []
+    mock_state.next = ["review_results"]  # 非空：checkpoint 尚未完成，有待执行节点
 
     mock_graph = AsyncMock()
     mock_graph.aget_state = AsyncMock(return_value=mock_state)
@@ -331,23 +327,24 @@ async def test_do_run_research_resume_calls_redis_delete_after_get():
 
     await _run_with_mocks(job_id, resume=True, mock_redis=mock_redis, mock_graph=mock_graph)
 
-    # 验证 delete 被调用，key 正确
-    mock_redis.delete.assert_called_once_with(f"job:{job_id}:resume_action")
+    # 验证 delete 被调用过，且其中一次调用的 key 是 resume_action
+    # （delete 还会额外被调用一次清理 pending_interrupt）
+    mock_redis.delete.assert_any_call(f"job:{job_id}:resume_action")
 
 
 async def test_do_run_research_resume_skips_get_when_no_key():
-    """resume=True 但 Redis 中无对应 key 时（get 返回 None），不调用 aupdate_state 写入 feedback"""
+    """resume=True 但 Redis 中无对应 key 时（get 返回 None），不调用 delete，但仍以默认 approve 继续"""
     job_id = "j-no-key"
     # action_data_json=None 模拟 Redis 中无 key
     mock_redis, mock_graph = _make_run_research_mocks(action_data_json=None)
 
     await _run_with_mocks(job_id, resume=True, mock_redis=mock_redis, mock_graph=mock_graph)
 
-    # get 被调用，但 delete 不应被调用（因为 raw 为 None，走不到 delete）
+    # get 被调用，但 delete 不应被调用（因为 raw 为 None，走不到 if raw: 块）
     mock_redis.get.assert_called_once_with(f"job:{job_id}:resume_action")
     mock_redis.delete.assert_not_called()
-    # aupdate_state 写 feedback 也不应被调用
-    mock_graph.aupdate_state.assert_not_called()
+    # raw=None 时仍会以默认 approve 调用 aupdate_state（更新 human_feedback）
+    mock_graph.aupdate_state.assert_called()
 
 
 # ─────────────────────────────────────────────────────────────────

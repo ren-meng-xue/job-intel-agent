@@ -1,6 +1,6 @@
 import pytest
-from fastapi import HTTPException
 
+from app.core.errors import AppError, ErrorCode
 from app.services.auth_service import AuthService
 
 
@@ -14,17 +14,19 @@ async def test_register_creates_user(db):
 async def test_register_duplicate_email_raises(db):
     service = AuthService(db)
     await service.register("grace@example.com", "grace", "password123")
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(AppError) as exc:
         await service.register("grace@example.com", "grace2", "password456")
-    assert exc.value.status_code == 400
+    assert exc.value.code == ErrorCode.ALREADY_EXISTS
+    assert exc.value.status_code == 409
 
 
 async def test_register_duplicate_username_raises(db):
     service = AuthService(db)
     await service.register("henry@example.com", "henry", "password123")
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(AppError) as exc:
         await service.register("henry2@example.com", "henry", "password456")
-    assert exc.value.status_code == 400
+    assert exc.value.code == ErrorCode.ALREADY_EXISTS
+    assert exc.value.status_code == 409
 
 
 async def test_login_success_returns_tokens(db):
@@ -39,8 +41,9 @@ async def test_login_success_returns_tokens(db):
 async def test_login_wrong_password_raises(db):
     service = AuthService(db)
     await service.register("julia@example.com", "julia", "correct")
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(AppError) as exc:
         await service.login("julia@example.com", "wrong")
+    assert exc.value.code == ErrorCode.AUTH_CREDENTIALS_WRONG
     assert exc.value.status_code == 401
 
 
@@ -58,6 +61,7 @@ async def test_logout_invalidates_refresh_token(db):
     _, refresh_token = await service.login("laura@example.com", "password")
     await service.logout(refresh_token)
     # 登出后 refresh 应抛 401
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(AppError) as exc:
         await service.refresh(refresh_token)
+    assert exc.value.code == ErrorCode.AUTH_REFRESH_INVALID
     assert exc.value.status_code == 401

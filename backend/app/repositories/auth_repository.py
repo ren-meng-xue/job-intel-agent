@@ -31,7 +31,9 @@ class AuthRepository:
             select(AuthSession).where(
                 AuthSession.refresh_token_hash == refresh_token_hash,
                 AuthSession.revoked_at.is_(None),
-                AuthSession.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
+                AuthSession.expires_at > datetime.now(timezone.utc).replace(
+                    tzinfo=None
+                ),
             )
         )
         return result.scalar_one_or_none()

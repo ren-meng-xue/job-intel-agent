@@ -25,47 +25,34 @@ def get_research_graph():
 def _build_graph(saver: MemorySaver):
     from langgraph.types import interrupt
 
-    def _review_results(state: ResearchState) -> dict:
-        """interrupt：用户审核搜索结果分析"""
-        interrupt({
-            "type": "interrupt",
-            "node": "review_results",
-            "data": {
-                "analysis": state["research_analysis"],
-                "search_results": state["search_results"],
-            },
-        })
-        return _handle_resume_action(state, retry_target="analyze", next_step="generate_report")
-
     def _review_draft(state: ResearchState) -> dict:
-        """interrupt：用户审核报告草稿"""
+        """interrupt：三个 TODO 全部完成后，用户审核完整报告草稿"""
         interrupt({
             "type": "interrupt",
             "node": "review_draft",
             "data": {
-                "draft_sections": state["draft_sections"],
+                "draft_sections": state.get("draft_sections") or [],
+                "research_analysis": state.get("research_analysis"),
             },
         })
-        return _handle_resume_action(state, retry_target="generate_report", next_step="finalize")
+        return _handle_resume_action(state, retry_target="search", next_step="finalize")
 
     def _finalize(state: ResearchState) -> dict:
         """组装 final_report，不 publish SSE（由 task 层在 DB 写入后统一发送）"""
+        # generate_report_node 已直接写入 final_report，优先保留；
+        # 仅当 draft_sections 路径时才重新组装
+        if state.get("final_report"):
+            return {"current_step": "done"}
         sections = state.get("draft_sections") or []
         report = "\n\n".join(
             f"## {s.get('heading', '')}\n\n{s.get('content', '')}" for s in sections
         )
         return {"current_step": "done", "final_report": report}
 
-    def _route_review_results(state: ResearchState) -> str:
-        step = state.get("current_step", "")
-        if step == "analyze":
-            return "analyze"
-        if step == "generate_report":
-            return "generate_report"
-        return "finalize"
-
     def _route_review_draft(state: ResearchState) -> str:
         step = state.get("current_step", "")
+        if step == "search":
+            return "search"
         if step == "generate_report":
             return "generate_report"
         return "finalize"
@@ -73,21 +60,16 @@ def _build_graph(saver: MemorySaver):
     builder = StateGraph(ResearchState)
     builder.add_node("search", search_node)
     builder.add_node("analyze", analyze_node)
-    builder.add_node("review_results", _review_results)
     builder.add_node("generate_report", generate_report_node)
     builder.add_node("review_draft", _review_draft)
     builder.add_node("finalize", _finalize)
 
     builder.set_entry_point("search")
     builder.add_edge("search", "analyze")
-    builder.add_edge("analyze", "review_results")
-    builder.add_conditional_edges("review_results", _route_review_results, {
-        "analyze": "analyze",
-        "generate_report": "generate_report",
-        "finalize": "finalize",
-    })
+    builder.add_edge("analyze", "generate_report")
     builder.add_edge("generate_report", "review_draft")
     builder.add_conditional_edges("review_draft", _route_review_draft, {
+        "search": "search",
         "generate_report": "generate_report",
         "finalize": "finalize",
     })

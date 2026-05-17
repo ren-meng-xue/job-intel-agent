@@ -2,12 +2,13 @@ import asyncio
 import json
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.errors import AppError, ErrorCode
 from app.models.resume import Resume
 from app.models.user import User
 from app.repositories.resume_repository import ResumeRepository
@@ -31,24 +32,20 @@ async def upload_resume(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """上传简历（PDF/DOCX）。每人限一份，已有简历时返回 409"""
+    """上传简历（PDF/DOCX），每次上传创建新记录"""
     repo = ResumeRepository(db)
 
-    existing = await repo.get_by_user(current_user.id)
-    if existing:
-        raise HTTPException(409, "已有简历，请先删除后再上传")
-
     if file.content_type not in _ALLOWED_CONTENT_TYPES:
-        raise HTTPException(400, "仅支持 PDF 或 DOCX 格式")
+        raise AppError(ErrorCode.BAD_REQUEST, "仅支持 PDF 或 DOCX 格式")
 
     file_bytes = await file.read()
     if len(file_bytes) > _MAX_SIZE:
-        raise HTTPException(413, "文件超过 10 MB 限制")
+        raise AppError(ErrorCode.BAD_REQUEST, "文件超过 10 MB 限制")
 
     try:
         raw_content = extract_text(file_bytes, file.filename or "")
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise AppError(ErrorCode.BAD_REQUEST, str(e))
 
     resume = Resume(
         user_id=current_user.id,
@@ -70,7 +67,7 @@ async def get_resume(
     repo = ResumeRepository(db)
     resume = await repo.get_by_user(current_user.id)
     if not resume:
-        raise HTTPException(404, "尚未上传简历")
+        raise AppError(ErrorCode.NOT_FOUND, "尚未上传简历")
     return resume
 
 
@@ -84,9 +81,9 @@ async def stream_resume(
     repo = ResumeRepository(db)
     resume = await repo.get_by_id(resume_id)
     if not resume:
-        raise HTTPException(404, "简历不存在")
+        raise AppError(ErrorCode.NOT_FOUND, "简历不存在")
     if resume.user_id != current_user.id:
-        raise HTTPException(403, "无权访问")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此简历")
 
     return StreamingResponse(
         _sse_generator(resume_id),
@@ -105,9 +102,9 @@ async def delete_resume(
     repo = ResumeRepository(db)
     resume = await repo.get_by_id(resume_id)
     if not resume:
-        raise HTTPException(404, "简历不存在")
+        raise AppError(ErrorCode.NOT_FOUND, "简历不存在")
     if resume.user_id != current_user.id:
-        raise HTTPException(403, "无权访问")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此简历")
     await repo.delete(resume_id)
 
 

@@ -12,7 +12,7 @@
 5. 实时状态用 SSE + Redis Pub/Sub，**禁止轮询**
 6. 数据库变更必须走 Alembic，禁止直接改表结构；ORM 模型变更后的迁移步骤见 `.claude/skills/deploy.md`
 7. 本地开发环境通过 `./dev.sh` 启动（混合模式：Docker 跑 postgres + redis，其余服务直接在本机跑）。新增或删除服务时，**必须同步更新 `dev.sh`**，保持脚本与实际架构一致
-8. 会话开始 / 用户说「todo」时的流程、changelog 读写与更新规则，见 `.claude/skills/changelog.md`
+8. 会话开始 / 任务前采用**分级触发**机制（L0 必做 → L1/L2 按需），changelog 读写与更新规则，见 `.claude/skills/changelog.md`
 9. 切换分支前，必须先执行 `git status` 检查未提交改动。如有，列出清单，询问用户：先 commit 再切，还是直接切
 10. 开发顺序：先写实现代码，实现完成后再写测试并运行通过。不使用"先写失败测试"的 TDD 流程
 11. **制定计划前必须执行分支检查**（触发时机：用户要求新功能/新 Phase/新模块，或 Claude 即将使用 `writing-plans` skill 时）：

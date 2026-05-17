@@ -13,14 +13,15 @@ async def test_register_returns_201(client):
     assert "id" in data
 
 
-async def test_register_duplicate_email_returns_400(client):
+async def test_register_duplicate_email_returns_409(client):
     payload = {"email": "dup@example.com", "username": "dup1", "password": "pw"}
     await client.post("/api/v1/auth/register", json=payload)
     resp = await client.post(
         "/api/v1/auth/register",
         json={"email": "dup@example.com", "username": "dup2", "password": "pw"},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "ALREADY_EXISTS"
 
 
 async def test_login_returns_access_token_and_cookie(client):

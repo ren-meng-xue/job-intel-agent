@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.errors import AppError, ErrorCode
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
@@ -40,7 +41,7 @@ async def login(
         key=settings.REFRESH_TOKEN_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
     )
@@ -52,7 +53,7 @@ async def refresh_token(request: Request, db: AsyncSession = Depends(get_db)):
     """用 Cookie 中的 refresh token 换取新 access token"""
     token = request.cookies.get(settings.REFRESH_TOKEN_COOKIE_NAME)
     if not token:
-        raise HTTPException(status_code=401, detail="未找到 refresh token")
+        raise AppError(ErrorCode.AUTH_TOKEN_MISSING, "未找到 refresh token")
     service = AuthService(db)
     access_token = await service.refresh(token)
     return {"access_token": access_token, "token_type": "bearer"}

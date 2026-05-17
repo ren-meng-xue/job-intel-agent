@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume import Resume
@@ -25,9 +25,12 @@ class ResumeRepository:
         return result.scalar_one_or_none()
 
     async def get_by_user(self, user_id: str) -> Resume | None:
-        """查该用户当前的简历，每人只能有一份"""
+        """查该用户最新上传的简历"""
         result = await self.session.execute(
-            select(Resume).where(Resume.user_id == user_id)
+            select(Resume)
+            .where(Resume.user_id == user_id)
+            .order_by(desc(Resume.created_at))
+            .limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -53,7 +56,9 @@ class ResumeRepository:
         resume.status = "done"
         await self.session.commit()
 
-    async def update_status(self, resume_id: str, status: str, error: str | None = None) -> None:
+    async def update_status(
+        self, resume_id: str, status: str, error: str | None = None,
+    ) -> None:
         """更新 status，解析失败时同步写入 parsing_error"""
         resume = await self.get_by_id(resume_id)
         if not resume:

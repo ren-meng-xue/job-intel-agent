@@ -7,9 +7,10 @@ SSE 端点测试 — GET /api/v1/reports/{job_id}/stream
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.report import Report
 
 # ---------- helpers ----------
 
@@ -67,6 +68,7 @@ def _make_mock_redis(pubsub):
     mock_redis = MagicMock()
     mock_redis.pubsub = MagicMock(return_value=pubsub)
     mock_redis.aclose = AsyncMock()
+    mock_redis.get = AsyncMock(return_value=None)  # 支持 pending interrupt 回放
     return mock_redis
 
 
@@ -215,3 +217,22 @@ async def test_stream_cleans_up_on_completion(client: AsyncClient):
     pubsub.unsubscribe.assert_called_once_with(f"job:{job_id}")
     pubsub.aclose.assert_called_once()
     mock_redis.aclose.assert_called_once()
+
+
+async def test_get_report_requires_owner(
+    client: AsyncClient,
+    db: AsyncSession,
+):
+    headers_a = await _register_and_login(client, suffix="report-a")
+    job_id = await _create_job(client, headers_a)
+
+    report = Report(job_id=job_id, content=None, status="done")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    headers_b = await _register_and_login(client, suffix="report-b")
+    resp = await client.get(f"/api/v1/reports/{report.id}", headers=headers_b)
+
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "ACCESS_DENIED"

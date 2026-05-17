@@ -2,6 +2,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.schemas.job import ExtractedJobInfo
+from app.tasks import celery_app
 from app.tasks.research import _do_parse_jd
 
 
@@ -55,10 +56,19 @@ async def test_do_parse_jd_updates_db_and_publishes_event():
     assert channel == "job:j-1"
     payload = json.loads(payload_str)
     assert payload["type"] == "parsed"
+    assert payload["step"] == "parse_complete"
+    assert payload["message"] == "JD 解析完成，请确认职位信息"
     assert payload["title"] == "SWE"
     assert payload["salary_range"] == "25k-40k"
     assert payload["location"] == "上海"
     mock_redis.aclose.assert_called_once()
+
+
+def test_celery_registers_app_tasks():
+    """worker 通过 app.tasks:celery_app 启动时应能发现所有任务"""
+    assert "research.parse_jd" in celery_app.tasks
+    assert "research.run" in celery_app.tasks
+    assert "resume.parse" in celery_app.tasks
 
 
 async def test_do_parse_jd_publishes_error_on_exception():

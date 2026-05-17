@@ -1,27 +1,69 @@
+import asyncio
+import base64
 import json
+import logging
 
-from openai import AsyncOpenAI
+from openai import APIError, APITimeoutError, AsyncOpenAI, RateLimitError
 
 from app.core.config import settings
+from app.core.errors import AppError, ErrorCode
 from app.schemas.job import ExtractedJobInfo
 
+logger = logging.getLogger(__name__)
+
 _client: AsyncOpenAI | None = None
+TIMEOUT_SECONDS = 60
+MAX_RETRIES = 2
 
 
 def _get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        _client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            timeout=TIMEOUT_SECONDS,
+        )
     return _client
 
 
+def _map_openai_error(exc: Exception) -> AppError:
+    if isinstance(exc, RateLimitError):
+        return AppError(ErrorCode.UPSTREAM_ERROR, "LLM 调用频率限制，请稍后重试")
+    if isinstance(exc, APITimeoutError):
+        return AppError(ErrorCode.UPSTREAM_ERROR, f"LLM 调用超时 ({TIMEOUT_SECONDS}s)")
+    if isinstance(exc, APIError):
+        return AppError(ErrorCode.UPSTREAM_ERROR, f"LLM 调用异常: {exc.message}")
+    return AppError(ErrorCode.UPSTREAM_ERROR, f"LLM 调用失败: {exc}")
+
+
 async def chat(messages: list[dict], model: str = "gpt-4o", **kwargs) -> str:
-    """通用 LLM 调用，**kwargs 透传给 OpenAI API（如 response_format、temperature）"""
+    """通用 LLM 调用，含 timeout、错误映射。RateLimit 时自动重试。"""
     client = _get_client()
-    response = await client.chat.completions.create(
-        model=model, messages=messages, **kwargs
-    )
-    return response.choices[0].message.content
+    last_exc: Exception | None = None
+
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = await client.chat.completions.create(
+                model=model, messages=messages, **kwargs
+            )
+            return response.choices[0].message.content
+        except RateLimitError as exc:
+            last_exc = exc
+            if attempt < MAX_RETRIES:
+                wait = (attempt + 1) * 3
+                logger.warning("LLM rate limited, retrying in %ds (attempt %d/%d)", wait, attempt + 1, MAX_RETRIES)
+                await asyncio.sleep(wait)
+            else:
+                logger.error("LLM rate limit exhausted after %d retries", MAX_RETRIES)
+        except (APIError, APITimeoutError) as exc:
+            last_exc = exc
+            logger.warning("LLM API error attempt %d/%d: %s", attempt + 1, MAX_RETRIES + 1, exc)
+        except Exception as exc:
+            last_exc = exc
+            logger.exception("LLM unexpected error")
+            break
+
+    raise _map_openai_error(last_exc)
 
 
 async def suggest_directions(
@@ -68,12 +110,58 @@ async def extract_resume_info(raw_content: str) -> dict:
     resp = await chat(
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": raw_content[:8000]},  # 防止超 token，正常简历远不到此限
+            {"role": "user", "content": raw_content[:8000]},
         ],
         model="gpt-4o-mini",
         response_format={"type": "json_object"},
     )
     return json.loads(resp)
+
+
+def _get_image_mime(data: bytes) -> str:
+    if data[:4] == b"\x89PNG":
+        return "image/png"
+    if data[:2] == b"\xff\xd8":
+        return "image/jpeg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/jpeg"
+
+
+async def extract_job_info_from_images(images: list[bytes]) -> "ExtractedJobInfo":
+    """从 JD 截图（最多 3 张）提取结构化字段，使用 GPT-4o Vision"""
+    logger.info("extract_job_info_from_images: image_count=%d total_bytes=%d", len(images), sum(len(i) for i in images))
+    system_prompt = (
+        "You are a job description parser. Extract key information from the job description images "
+        "and return a JSON object with these exact fields:\n"
+        '- "title": string (job title)\n'
+        '- "company": string (company name)\n'
+        '- "requirements": array of strings (key requirements, max 10 items)\n'
+        '- "jd_summary": string (2-3 sentence summary of the role)\n'
+        '- "salary_range": string or null\n'
+        '- "location": string or null\n'
+        '- "work_type": string or null ("remote", "hybrid", or "onsite")\n'
+        "Return only valid JSON, no markdown."
+    )
+    image_contents: list[dict] = [
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{_get_image_mime(img)};base64,{base64.b64encode(img).decode()}"
+            },
+        }
+        for img in images
+    ]
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {
+            "role": "user",
+            "content": image_contents + [{"type": "text", "text": "请从以上截图中提取职位信息"}],
+        },
+    ]
+    response_text = await chat(messages=messages, model="gpt-4o", response_format={"type": "json_object"})
+    data = json.loads(response_text)
+    return ExtractedJobInfo(**data)
 
 
 async def extract_job_info(markdown: str) -> ExtractedJobInfo:

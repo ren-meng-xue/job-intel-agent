@@ -656,6 +656,11 @@
             <td><span class="skill-badge" style="color:#fb923c;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.07)">—</span></td>
             <td><div class="tool-tags"><span class="tool-tag">subagent-driven-dev</span></div></td>
           </tr>
+          <tr>
+            <td><div class="trigger-text">写 changelog、读 changelog、更新进度</div></td>
+            <td><span class="skill-badge" style="color:#4ade80;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.07)">changelog.md</span></td>
+            <td><div class="tool-tags"><span class="tool-tag">—</span></div></td>
+          </tr>
           <tr onclick="scrollTo('html-design')">
             <td><div class="trigger-text">生成独立 HTML 文件、视觉作品、落地页</div></td>
             <td><span class="skill-badge" style="color:#2dd4bf;border:1px solid rgba(45,212,191,.3);background:rgba(45,212,191,.07)">frontend-design.md</span></td>
@@ -822,19 +827,19 @@
             </div>
           </div>
           <div class="skill-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">TDD 循环（强制执行）</div>
-            <div class="tdd-row">
-              <div class="tdd-pill" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)">
-                <div class="tdd-pill-label" style="color:#f87171">RED</div>
-                <div class="tdd-pill-desc">先写失败测试</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">开发顺序（先实现，后测试）</div>
+            <div style="display:flex;gap:6px;margin-bottom:16px">
+              <div class="tdd-pill" style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2)">
+                <div class="tdd-pill-label" style="color:#60a5fa">IMPL</div>
+                <div class="tdd-pill-desc">写完整实现代码</div>
               </div>
               <div class="tdd-pill" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2)">
-                <div class="tdd-pill-label" style="color:#34d399">GREEN</div>
-                <div class="tdd-pill-desc">最小实现通过</div>
+                <div class="tdd-pill-label" style="color:#34d399">TEST</div>
+                <div class="tdd-pill-desc">编写对应测试</div>
               </div>
-              <div class="tdd-pill" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2)">
-                <div class="tdd-pill-label" style="color:#818cf8">REFACTOR</div>
-                <div class="tdd-pill-desc">保绿优化代码</div>
+              <div class="tdd-pill" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2)">
+                <div class="tdd-pill-label" style="color:#fbbf24">RUN</div>
+                <div class="tdd-pill-desc">全部通过后提交</div>
               </div>
             </div>
 
@@ -853,7 +858,7 @@
             </div>
 
             <div class="forbidden-list">
-              <span class="forbidden-tag">✕ 先写实现再补测试</span>
+              <span class="forbidden-tag">✕ 先写失败测试（TDD 流程）</span>
               <span class="forbidden-tag">✕ 有 ❌ 继续推进</span>
               <span class="forbidden-tag">✕ mock 核心外部依赖集成测试</span>
             </div>
@@ -1025,43 +1030,98 @@
       <div class="constraints-grid">
 
         <div class="constraint-card">
-          <div class="constraint-num">#1 &nbsp;LLM 调用层级</div>
+          <div class="constraint-num">#1 &nbsp;语言</div>
+          <div class="constraint-title">始终使用简体中文</div>
+          <div class="constraint-text">所有回复始终使用<strong>简体中文</strong>，任何情况不可跳过</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#2 &nbsp;安全配置</div>
+          <div class="constraint-title">禁止硬编码 Key / Secret</div>
+          <div class="constraint-text">所有配置走<strong>环境变量</strong>，禁止在代码中硬编码任何 Key 或 Secret</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#3 &nbsp;commit / push</div>
+          <div class="constraint-title">用户指令直接执行；Claude 主动发起须等「1」</div>
+          <div class="constraint-text">
+            用户消息本身即指令 → 直接执行<br>
+            Claude 主动提交 → 说明内容，等用户回复「1」<br>
+            push 后非 main → 询问是否合并
+          </div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#4 &nbsp;LLM 调用层级</div>
           <div class="constraint-title">services/ 层唯一调用点</div>
           <div class="constraint-text">LLM 调用只在 <code>services/</code> 层，<code>api/</code> 层禁止直接调用</div>
         </div>
 
         <div class="constraint-card">
-          <div class="constraint-num">#2 &nbsp;实时状态</div>
+          <div class="constraint-num">#5 &nbsp;实时状态</div>
           <div class="constraint-title">SSE + Redis Pub/Sub</div>
           <div class="constraint-text">实时状态用 SSE + Redis Pub/Sub，<strong>禁止轮询</strong></div>
         </div>
 
         <div class="constraint-card">
-          <div class="constraint-num">#3 &nbsp;数据库变更</div>
+          <div class="constraint-num">#6 &nbsp;数据库变更</div>
           <div class="constraint-title">必须走 Alembic</div>
-          <div class="constraint-text">数据库变更必须走 Alembic 迁移，禁止直接修改表结构</div>
+          <div class="constraint-text">数据库变更必须走 Alembic 迁移，禁止直接修改表结构。ORM 模型变更后迁移步骤见 <code>deploy.md</code></div>
         </div>
 
         <div class="constraint-card">
-          <div class="constraint-num">#4 &nbsp;ORM 变更三步</div>
-          <div class="constraint-title">models/ 变更前 commit 必须</div>
-          <div class="constraint-text">
-            ① <code>alembic revision --autogenerate</code> 已执行并 review<br>
-            ② <code>alembic upgrade head</code> 本地运行成功<br>
-            ③ 迁移文件已纳入本次 commit
+          <div class="constraint-num">#7 &nbsp;开发环境</div>
+          <div class="constraint-title">./dev.sh 一键启动（混合模式）</div>
+          <div class="constraint-text">Docker 跑 postgres + redis，其余服务直接在本机跑。新增或删除服务时必须同步更新 <code>dev.sh</code></div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#8 &nbsp;会话机制</div>
+          <div class="constraint-title">分级触发 + Changelog</div>
+          <div class="constraint-text">会话开始 / 任务前采用<strong>分级触发</strong>机制（L0 必做 → L1/L2 按需），changelog 读写与更新规则见 <code>changelog.md</code></div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#9 &nbsp;分支切换</div>
+          <div class="constraint-title">切换前必须 git status</div>
+          <div class="constraint-text">切换分支前必须先执行 <code>git status</code> 检查未提交改动。如有，列出清单询问用户：先 commit / stash 再切，还是直接切</div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-num">#10 &nbsp;开发顺序</div>
+          <div class="constraint-title">先实现，后测试（非 TDD）</div>
+          <div class="constraint-text">先写实现代码，实现完成后再写测试并运行通过。<strong>不使用</strong>「先写失败测试」的 TDD 流程</div>
+        </div>
+
+        <div class="constraint-card" style="grid-column: 1 / -1">
+          <div class="constraint-num">#11 &nbsp;计划前分支检查</div>
+          <div class="constraint-title">制定计划 / 使用 writing-plans 前，必须执行以下 6 步</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">a.</span>
+              <span class="constraint-text">执行 <code>git branch --show-current</code> 获取当前分支名</span>
+            </div>
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">b.</span>
+              <span class="constraint-text">判断计划内容是否为独立新功能（与当前分支职责无关）</span>
+            </div>
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">c.</span>
+              <span class="constraint-text">若属新功能：询问「是否创建新分支？建议名称：<code>feature/xxx</code>」</span>
+            </div>
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">d.</span>
+              <span class="constraint-text">执行 <code>git status</code>：有改动时列出清单并询问 commit / stash / 留当前分支</span>
+            </div>
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">e.</span>
+              <span class="constraint-text">等待用户回应（语义判断：「ok」「1」「好」均视为同意）再开始制定计划</span>
+            </div>
+            <div style="padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)">
+              <span style="color:#6366f1;font-family:var(--mono);font-size:10px;display:block;margin-bottom:4px">f.</span>
+              <span class="constraint-text">若当前在 <code>main</code> 且计划需要独立分支，必须提醒，<strong>不可直接在 main 开发</strong></span>
+            </div>
           </div>
-        </div>
-
-        <div class="constraint-card">
-          <div class="constraint-num">#5 &nbsp;开发环境</div>
-          <div class="constraint-title">./dev.sh 一键启动</div>
-          <div class="constraint-text">本地开发通过 <code>./dev.sh</code> 启动（Docker 跑 postgres + redis，其余服务在本机跑）。新增/删除服务必须同步更新 dev.sh</div>
-        </div>
-
-        <div class="constraint-card">
-          <div class="constraint-num">#6 &nbsp;会话扫描</div>
-          <div class="constraint-title">每次会话必查未完成任务</div>
-          <div class="constraint-text">每次会话开始，扫描 <code>.claude/tasks/</code>，若有 Gate 未全部 ✅ 的任务，第一条回复主动提示</div>
         </div>
 
       </div>
@@ -1069,7 +1129,7 @@
 
     <footer class="site-footer">
       <span class="footer-text">job-intel-agent &nbsp;·&nbsp; .claude/CLAUDE.md &nbsp;+&nbsp; skills/</span>
-      <span class="footer-text">2026-05-14</span>
+      <span class="footer-text">2026-05-17</span>
     </footer>
 
   </main>

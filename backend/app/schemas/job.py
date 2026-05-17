@@ -1,11 +1,11 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class ExtractedJobInfo(BaseModel):
-    title: str
-    company: str
-    requirements: list[str]
-    jd_summary: str
+    title: str = ""
+    company: str = ""
+    requirements: list[str] = []
+    jd_summary: str = ""
     salary_range: str | None = None
     location: str | None = None
     work_type: str | None = None
@@ -16,9 +16,18 @@ class JobCreate(BaseModel):
     resume_id: str | None = None
 
 
+class JobCreateFromText(BaseModel):
+    raw_content: str
+    resume_id: str | None = None
+
+
+class RawContentPayload(BaseModel):
+    raw_content: str
+
+
 class JobResponse(BaseModel):
     id: str
-    url: str
+    url: str | None = None
     status: str
     title: str | None = None
     company: str | None = None
@@ -32,7 +41,7 @@ class JobResponse(BaseModel):
 class JobDetailResponse(BaseModel):
     """含完整 JD 字段，用于 confirm/start 接口的返回"""
     id: str
-    url: str
+    url: str | None = None
     status: str
     title: str | None = None
     company: str | None = None
@@ -60,7 +69,7 @@ class JobConfirmPayload(BaseModel):
 
 class JobStartPayload(BaseModel):
     """用户选择的调研方向列表，至少一个"""
-    selected_directions: list[str]
+    selected_directions: list[str] = Field(..., min_length=1)
 
 
 class DirectionsPayload(BaseModel):

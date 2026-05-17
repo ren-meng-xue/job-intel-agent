@@ -17,6 +17,10 @@
           {
             "type": "command",
             "command": "jq -r '\"[Pre-Hook] 即将执行: \" + .tool_input.command' 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "if jq -r '.tool_input.command // \"\"' | grep -qE '(cat|head|tail|less|more|bat) [^ ]*\\.env'; then echo '{\"continue\":false,\"stopReason\":\"⛔ 已阻止读取 .env 文件内容，请通过 source .env 加载环境变量，不要直接打印\"}'; fi"
           }
         ]
       }

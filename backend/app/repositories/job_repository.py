@@ -20,6 +20,37 @@ class JobRepository:
         await self.session.refresh(job)
         return job
 
+    async def create_job_from_content(
+        self,
+        user_id: str,
+        raw_content: str,
+        resume_id: str | None = None,
+    ) -> Job:
+        """创建无 URL 的 Job 记录（用户直接粘贴文本），status=parsing"""
+        job = Job(
+            url=None,
+            raw_content=raw_content,
+            user_id=user_id,
+            resume_id=resume_id,
+            status="parsing",
+        )
+        self.session.add(job)
+        await self.session.commit()
+        await self.session.refresh(job)
+        return job
+
+    async def create_job_from_images(
+        self,
+        user_id: str,
+        resume_id: str | None = None,
+    ) -> Job:
+        """创建无 URL 的 Job 记录（用户上传截图），status=parsing"""
+        job = Job(url=None, user_id=user_id, resume_id=resume_id, status="parsing")
+        self.session.add(job)
+        await self.session.commit()
+        await self.session.refresh(job)
+        return job
+
     async def get_by_id(self, job_id: str) -> Job | None:
         """按 job_id 查询，Celery task 用它拿 url 和当前状态"""
         result = await self.session.execute(select(Job).where(Job.id == job_id))

@@ -8,4 +8,7 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
 )
 celery_app.conf.task_serializer = "json"
-celery_app.autodiscover_tasks(["app.tasks"])
+
+# Import task modules after celery_app is created so decorators register tasks
+# for workers launched with `celery -A app.tasks:celery_app`.
+from app.tasks import research, resume  # noqa: E402,F401

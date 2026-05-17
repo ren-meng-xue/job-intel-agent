@@ -1,11 +1,13 @@
+import base64
 import json
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.errors import AppError, ErrorCode
 from app.models.user import User
 from app.repositories.job_repository import JobRepository
 from app.schemas.job import (
@@ -13,15 +15,22 @@ from app.schemas.job import (
     DirectionsResponse,
     JobConfirmPayload,
     JobCreate,
+    JobCreateFromText,
     JobDetailResponse,
     JobResponse,
     JobStartPayload,
+    RawContentPayload,
     ReparsePayload,
     ResumePayload,
 )
 from app.services.auth_service import get_current_user
 from app.services.llm_service import suggest_directions
-from app.tasks.research import task_parse_jd, task_run_research
+from app.tasks.research import (
+    task_extract_from_images,
+    task_extract_from_raw,
+    task_parse_jd,
+    task_run_research,
+)
 
 router = APIRouter()
 
@@ -43,6 +52,84 @@ async def create_job(
     return job
 
 
+@router.get("/{job_id}", response_model=JobDetailResponse)
+async def get_job(
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取 Job 详情"""
+    repo = JobRepository(db)
+    job = await repo.get_by_id(job_id)
+    if not job:
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
+    if job.user_id != current_user.id:
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
+    return job
+
+
+@router.post("/from-text", response_model=JobResponse, status_code=201)
+async def create_job_from_text(
+    payload: JobCreateFromText,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """用户直接粘贴 JD 文本（无 URL），创建 Job 并触发 LLM 提取"""
+    repo = JobRepository(db)
+    job = await repo.create_job_from_content(
+        raw_content=payload.raw_content,
+        user_id=current_user.id,
+        resume_id=payload.resume_id,
+    )
+    task_extract_from_raw.delay(job.id)
+    return job
+
+
+@router.post("/from-images", response_model=JobResponse, status_code=201)
+async def create_job_from_images(
+    images: list[UploadFile] = File(...),
+    resume_id: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """用户上传 JD 截图（最多 3 张），创建 Job 并触发 GPT-4o Vision 提取"""
+    if len(images) > 3:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "最多上传 3 张截图")
+    images_b64 = [
+        base64.b64encode(await img.read()).decode()
+        for img in images
+    ]
+    repo = JobRepository(db)
+    job = await repo.create_job_from_images(user_id=current_user.id, resume_id=resume_id)
+    task_extract_from_images.delay(job.id, images_b64)
+    return job
+
+
+@router.post("/{job_id}/raw-content", response_model=JobResponse)
+async def submit_raw_content(
+    job_id: str,
+    payload: RawContentPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """URL 爬取失败后，用户补充粘贴的 JD 文本，触发 LLM 提取"""
+    repo = JobRepository(db)
+    job = await repo.get_by_id(job_id)
+    if not job:
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
+    if job.user_id != current_user.id:
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
+    if job.status not in ("awaiting_manual_input", "parsing"):
+        raise AppError(ErrorCode.CONFLICT, f"Job 当前状态为 '{job.status}'，不支持此操作")
+
+    job.raw_content = payload.raw_content
+    job.status = "parsing"
+    await db.commit()
+    await db.refresh(job)
+    task_extract_from_raw.delay(job_id)
+    return job
+
+
 @router.post("/{job_id}/confirm", response_model=JobDetailResponse)
 async def confirm_job(
     job_id: str,
@@ -54,11 +141,14 @@ async def confirm_job(
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
     if job.status != "awaiting_confirm":
-        raise HTTPException(status_code=409, detail=f"Job status is '{job.status}', expected 'awaiting_confirm'")
+        raise AppError(
+            ErrorCode.CONFLICT,
+            f"Job 当前状态为 '{job.status}'，不支持此操作",
+        )
 
     updated = await repo.confirm_job(
         job_id,
@@ -93,11 +183,14 @@ async def start_research(
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
     if job.status != "awaiting_directions":
-        raise HTTPException(status_code=409, detail=f"Job status is '{job.status}', expected 'awaiting_directions'")
+        raise AppError(
+            ErrorCode.CONFLICT,
+            f"Job 当前状态为 '{job.status}'，不支持此操作",
+        )
 
     updated = await repo.start_research(job_id, payload.selected_directions)
     task_run_research.delay(job_id)
@@ -115,9 +208,9 @@ async def get_directions(
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
 
     suggestions = await suggest_directions(
         title=job.title or "",
@@ -140,11 +233,14 @@ async def reparse_job(
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
     if job.status != "awaiting_confirm":
-        raise HTTPException(status_code=409, detail=f"Job status is '{job.status}', expected 'awaiting_confirm'")
+        raise AppError(
+            ErrorCode.CONFLICT,
+            f"Job 当前状态为 '{job.status}'，不支持此操作",
+        )
 
     await repo.update_status(job_id, "parsing")
     task_parse_jd.delay(job_id)
@@ -161,16 +257,19 @@ async def resume_job(
 ):
     """恢复 LangGraph 中断：将用户意图写入 Redis，由 Celery task 在 checkpoint 上应用"""
     if payload.action not in ("approve", "edit", "retry"):
-        raise HTTPException(status_code=422, detail="action 须为 approve / edit / retry")
+        raise AppError(ErrorCode.VALIDATION_ERROR, "action 须为 approve / edit / retry")
 
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
     if job.status != "researching":
-        raise HTTPException(status_code=409, detail=f"Job status is '{job.status}', expected 'researching'")
+        raise AppError(
+            ErrorCode.CONFLICT,
+            f"Job 当前状态为 '{job.status}'，不支持此操作",
+        )
 
     redis_client = await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     try:

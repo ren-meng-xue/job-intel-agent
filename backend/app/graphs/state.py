@@ -30,3 +30,9 @@ class ResearchState(TypedDict):
     # ── 控制 ──
     current_step: str
     error: str | None
+
+    # ── 简历 ──
+    resume_content: str | None
+
+    # ── 结构化报告（6 模块 JSON，存入 Report.content）──
+    report_data: dict | None

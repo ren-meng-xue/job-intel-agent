@@ -6,7 +6,6 @@ import pytest
 from app.services.resume_service import extract_text
 from app.tasks.resume import _do_parse_resume
 
-
 # ── resume_service 文本提取 ────────────────────────────────────────────────
 
 

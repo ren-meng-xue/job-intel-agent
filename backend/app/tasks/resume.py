@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 
 import redis.asyncio as aioredis
 
@@ -8,6 +9,8 @@ from app.core.database import AsyncSessionLocal
 from app.repositories.resume_repository import ResumeRepository
 from app.services.llm_service import extract_resume_info
 from app.tasks import celery_app
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="resume.parse", soft_time_limit=120)
@@ -26,7 +29,6 @@ async def _do_parse_resume(resume_id: str) -> None:
     5. Redis publish parsed 事件
     出错时 status → failed，publish error 事件
     """
-    # 每次任务创建新连接，避免跨 event loop 复用旧连接
     redis = await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     channel = f"resume:{resume_id}"
     try:
@@ -37,7 +39,6 @@ async def _do_parse_resume(resume_id: str) -> None:
                 return
 
         if not resume.raw_content:
-            # 扫描版 PDF 无法提取文本，直接标记失败
             async with AsyncSessionLocal() as session:
                 repo = ResumeRepository(session)
                 await repo.update_status(
@@ -45,7 +46,8 @@ async def _do_parse_resume(resume_id: str) -> None:
                     "failed",
                     error="文件文本为空，可能是扫描版 PDF，暂不支持",
                 )
-            await redis.publish(channel, json.dumps({"type": "error", "resume_id": resume_id}))
+            error_msg = json.dumps({"type": "error", "resume_id": resume_id})
+            await redis.publish(channel, error_msg)
             return
 
         info = await extract_resume_info(resume.raw_content)
@@ -61,12 +63,21 @@ async def _do_parse_resume(resume_id: str) -> None:
                 summary=info.get("summary"),
             )
 
-        await redis.publish(channel, json.dumps({"type": "parsed", "resume_id": resume_id}))
+        parsed_msg = json.dumps({"type": "parsed", "resume_id": resume_id})
+        await redis.publish(channel, parsed_msg)
 
     except Exception as e:
+        logger.exception("Resume parse task failed: resume_id=%s", resume_id)
         async with AsyncSessionLocal() as session:
             repo = ResumeRepository(session)
             await repo.update_status(resume_id, "failed", error=str(e))
-        await redis.publish(channel, json.dumps({"type": "error", "resume_id": resume_id}))
+        try:
+            error_msg = json.dumps({"type": "error", "resume_id": resume_id})
+            await redis.publish(channel, error_msg)
+        except Exception:
+            logger.exception(
+                "Redis publish failed for resume error: resume_id=%s",
+                resume_id,
+            )
     finally:
         await redis.aclose()

@@ -2,16 +2,19 @@ import asyncio
 import json
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException
+import redis.exceptions
+from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.errors import AppError, ErrorCode
+from app.models.report import Report
 from app.models.user import User
 from app.repositories.job_repository import JobRepository
-from app.schemas.report import ReportResponse
-from app.services.auth_service import get_current_user
+from app.schemas.report import ReportData, ReportResponse
+from app.services.auth_service import get_current_user, get_user_by_raw_token
 
 router = APIRouter()
 
@@ -29,6 +32,11 @@ async def _sse_generator(job_id: str):
     await pubsub.subscribe(f"job:{job_id}")
 
     try:
+        # 回放：检查 pending interrupt（刷新/重连场景恢复）
+        pending = await redis.get(f"job:{job_id}:pending_interrupt")
+        if pending:
+            yield f"data: {pending}\n\n"
+
         while True:
             try:
                 message = await asyncio.wait_for(
@@ -39,6 +47,9 @@ async def _sse_generator(job_id: str):
                 # 15 秒无消息，发 keep-alive 防止代理断连
                 yield ": keep-alive\n\n"
                 continue
+            except redis.exceptions.ConnectionError:
+                yield f"data: {json.dumps({'type': 'error', 'message': '服务暂时不可用，请刷新重试'})}\n\n"
+                break
 
             if message is None:
                 await asyncio.sleep(0.1)
@@ -67,16 +78,32 @@ async def _sse_generator(job_id: str):
 @router.get("/{job_id}/stream")
 async def stream_report(
     job_id: str,
+    token: str | None = Query(None),
+    authorization: str | None = Header(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    """SSE 端点：订阅 Job 解析进度事件，直到 parsed/error 终态"""
+    """SSE 端点：订阅 Job 解析进度事件，直到 parsed/error 终态。
+
+    EventSource 不支持自定义 header，故同时接受 ?token= query param。
+    优先级：Authorization header > ?token query param。
+    """
+    raw_token: str | None = None
+    if authorization and authorization.startswith("Bearer "):
+        raw_token = authorization[7:]
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        raise AppError(ErrorCode.AUTH_TOKEN_MISSING, "未提供认证 token")
+
+    current_user = await get_user_by_raw_token(raw_token, db)
+
     repo = JobRepository(db)
     job = await repo.get_by_id(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
     if job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Job")
 
     return StreamingResponse(
         _sse_generator(job_id),
@@ -91,7 +118,37 @@ async def stream_report(
 @router.get("/{report_id}", response_model=ReportResponse)
 async def get_report(
     report_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # TODO: Phase 2D — 从 DB 查询报告
-    raise NotImplementedError
+    from sqlalchemy import select
+    report = await db.get(Report, report_id)
+    # 前端 URL 使用 job_id，兼容通过 job_id 查找
+    if not report:
+        stmt = select(Report).where(Report.job_id == report_id).limit(1)
+        result = await db.execute(stmt)
+        report = result.scalar_one_or_none()
+    if not report:
+        raise AppError(ErrorCode.NOT_FOUND, "Report 不存在")
+
+    repo = JobRepository(db)
+    job = await repo.get_by_id(report.job_id)
+    if not job:
+        raise AppError(ErrorCode.NOT_FOUND, "Job 不存在")
+    if job.user_id != current_user.id:
+        raise AppError(ErrorCode.ACCESS_DENIED, "无权访问此 Report")
+
+    data = None
+    if report.content:
+        try:
+            raw = json.loads(report.content)
+            data = ReportData(**raw)
+        except Exception:
+            data = None
+
+    return ReportResponse(
+        id=report.id,
+        job_id=report.job_id,
+        status=report.status,
+        data=data,
+    )
