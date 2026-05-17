@@ -5,6 +5,7 @@ import { AuthGuard } from "../components/AuthGuard";
 export const metadata: Metadata = {
   title: "Job Intel Agent",
   description: "AI 驱动的求职情报助手",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

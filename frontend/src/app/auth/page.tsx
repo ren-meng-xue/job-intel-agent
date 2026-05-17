@@ -15,14 +15,14 @@ function calcStrength(pwd: string): number {
   return score
 }
 
-const STRENGTH_LABELS = ['', '弱', '一般', '较强', '强']
-const STRENGTH_TEXT_COLORS = ['', 'text-red-500', 'text-yellow-600', 'text-blue-500', 'text-green-500']
+const STRENGTH_LABELS = ['极弱', '弱', '一般', '较强', '强']
+const STRENGTH_TEXT_COLORS = ['text-red-500', 'text-red-500', 'text-yellow-600', 'text-blue-500', 'text-green-500']
 
 function strengthBarColor(barIndex: number, score: number): string {
   if (score <= barIndex) return 'bg-gray-200'
-  if (score === 1) return 'bg-red-400'
-  if (score === 2) return barIndex === 0 ? 'bg-red-400' : 'bg-yellow-400'
-  if (score === 3) return barIndex < 2 ? 'bg-blue-400' : 'bg-blue-400'
+  if (score <= 1) return 'bg-red-400'
+  if (score === 2) return barIndex < 1 ? 'bg-red-400' : 'bg-yellow-400'
+  if (score === 3) return 'bg-blue-400'
   return 'bg-green-400'
 }
 
@@ -302,24 +302,24 @@ export default function AuthPage() {
             {tab === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">邮箱</label>
+                  <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1.5">邮箱</label>
                   <div className="relative">
                     <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="you@example.com" required autoComplete="email"
                       className="w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-sm font-medium text-gray-700">密码</label>
+                    <label htmlFor="login-password" className="text-sm font-medium text-gray-700">密码</label>
                     <a href="#" className="text-xs text-blue-600 hover:underline">忘记密码？</a>
                   </div>
                   <div className="relative">
-                    <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                    <input id="login-password" type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                       placeholder="请输入密码" required autoComplete="current-password"
                       className="w-full rounded-xl border border-gray-300 bg-white pl-4 pr-11 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
@@ -346,27 +346,27 @@ export default function AuthPage() {
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">邮箱</label>
+                  <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 mb-1.5">邮箱</label>
                   <div className="relative">
                     <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    <input id="register-email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="you@example.com" required autoComplete="email"
                       className="w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">用户名</label>
-                  <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+                  <label htmlFor="register-username" className="block text-sm font-medium text-gray-700 mb-1.5">用户名</label>
+                  <input id="register-username" type="text" value={username} onChange={e => setUsername(e.target.value)}
                     placeholder="你的昵称" required autoComplete="username"
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">密码</label>
+                  <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1.5">密码</label>
                   <div className="relative">
-                    <input type={showRegPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                    <input id="register-password" type={showRegPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                       placeholder="至少 8 位，包含字母和数字" required autoComplete="new-password"
                       className="w-full rounded-xl border border-gray-300 bg-white pl-4 pr-11 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     <button type="button" onClick={() => setShowRegPwd(v => !v)}

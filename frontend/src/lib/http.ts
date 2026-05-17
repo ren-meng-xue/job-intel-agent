@@ -1,9 +1,10 @@
-import { getAccessToken, setSessionTokens } from './session'
+import { ApiError, parseApiError } from './errors'
+import { clearSession, getAccessToken, setSessionTokens } from './session'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8001/api/v1'
+const TIMEOUT_MS = 30_000
 
-// 直接调 refresh 端点，不经过 http() 避免循环
-async function doRefresh(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const res = await fetch(`${BASE_URL}/auth/refresh-token`, {
     method: 'POST',
     credentials: 'include',
@@ -14,28 +15,63 @@ async function doRefresh(): Promise<string | null> {
   return data.access_token
 }
 
+function redirectToLogin(): void {
+  clearSession()
+  if (typeof window !== 'undefined') {
+    window.location.replace('/auth')
+  }
+}
+
 export async function http(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getAccessToken()
   const headers = new Headers(init.headers as HeadersInit)
 
-  // FormData 让浏览器自动设置 multipart boundary，其余请求加 JSON header
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: 'include',
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const signal = init.signal ? init.signal : controller.signal
 
-  if (res.status !== 401) return res
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: 'include',
+      signal,
+    })
 
-  // 401：刷新 token 后重试一次
-  const newToken = await doRefresh()
-  if (!newToken) return res
+    if (res.status !== 401) return res
 
-  headers.set('Authorization', `Bearer ${newToken}`)
-  return fetch(`${BASE_URL}${path}`, { ...init, headers, credentials: 'include' })
+    // 401：尝试刷新，失败则清 session 并跳转登录
+    const newToken = await refreshAccessToken()
+    if (!newToken) {
+      redirectToLogin()
+      throw await parseApiError(res)
+    }
+
+    headers.set('Authorization', `Bearer ${newToken}`)
+    const retried = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: 'include',
+      signal,
+    })
+
+    if (retried.status === 401) {
+      redirectToLogin()
+      throw await parseApiError(retried)
+    }
+    return retried
+  } catch (err) {
+    if (err instanceof ApiError) throw err
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(408, { code: 'INTERNAL_ERROR', message: '请求超时' })
+    }
+    throw new ApiError(0, { code: 'INTERNAL_ERROR', message: '网络错误，请检查连接' })
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }

@@ -1,8 +1,9 @@
 import { http } from '../lib/http'
+import { parseApiError } from '../lib/errors'
 import { clearSession, setSessionTokens } from '../lib/session'
 import type { LoginResponse, UserInfo } from '../lib/types'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8001/api/v1'
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   // login 直接 fetch，绕过 http()（避免未登录时发 Bearer 头触发 refresh 循环）
@@ -13,8 +14,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
     credentials: 'include',
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail ?? '登录失败')
+    throw await parseApiError(res)
   }
   const data = (await res.json()) as LoginResponse
   setSessionTokens(data.access_token)
@@ -32,14 +32,16 @@ export async function register(
     body: JSON.stringify({ email, username, password }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail ?? '注册失败')
+    throw await parseApiError(res)
   }
 }
 
 export async function logout(): Promise<void> {
-  await http('/auth/logout', { method: 'POST' })
-  clearSession()
+  try {
+    await http('/auth/logout', { method: 'POST' })
+  } finally {
+    clearSession()
+  }
 }
 
 export async function getMe(): Promise<UserInfo> {

@@ -15,7 +15,7 @@ export default function HumanInLoopDialog({ jobId, onClose }: Props) {
   function handleConfirm() {
     setConfirmed(true);
     onClose();
-    router.push(`/report/${jobId}`);
+    router.push(`/report/${jobId}?step=parsing`);
   }
 
   return (

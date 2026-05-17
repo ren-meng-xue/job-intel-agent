@@ -10,3 +10,202 @@
 .char-float-1 { animation: charFloat 3.2s ease-in-out infinite; }
 .char-float-2 { animation: charFloat 2.8s ease-in-out infinite 0.6s; }
 .char-float-3 { animation: charFloat 3.6s ease-in-out infinite 1.1s; }
+
+@keyframes unlockCard {
+  from { opacity: 0.4; transform: translateY(8px); }
+  to   { opacity: 1;   transform: translateY(0); }
+}
+.animate-unlock { animation: unlockCard 0.4s ease forwards; }
+
+/* ══════════════════════════════════════════════════════════════
+   AI 炫酷 Loading 动画系统
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. 神经脉冲核心 — 中央能量球 + 双层轨道环 ── */
+@keyframes neuralPulse {
+  0%, 100% { transform: scale(1);   box-shadow: 0 0 12px rgba(59,130,246,0.6), 0 0 40px rgba(59,130,246,0.25); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 20px rgba(59,130,246,0.9), 0 0 60px rgba(99,102,241,0.45); }
+}
+@keyframes orbitRing1 {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbitRing2 {
+  from { transform: rotate(0deg) scaleX(0.6); }
+  to   { transform: rotate(-360deg) scaleX(0.6); }
+}
+.neural-core {
+  animation: neuralPulse 2s ease-in-out infinite;
+}
+.orbit-ring-1 {
+  animation: orbitRing1 3s linear infinite;
+}
+.orbit-ring-2 {
+  animation: orbitRing2 4.5s linear infinite;
+}
+
+/* ── 2. 数据粒子流 — 多个发光粒子沿水平方向依次滑过 ── */
+@keyframes dataParticle {
+  0%   { transform: translateX(-200%); opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+.particle-track {
+  position: relative;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 6px #3b82f6, 0 0 12px #6366f1;
+  animation: dataParticle 1.8s ease-in-out infinite;
+}
+
+/* ── 3. 打字机光标 ── */
+@keyframes blinkCaret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+.cursor-blink {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #3b82f6;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blinkCaret 0.8s step-end infinite;
+}
+
+/* ── 4. 渐变扫光 — shimmer 从左到右扫过 ── */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.shimmer-surface {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+  animation: shimmer 2.2s ease-in-out infinite;
+}
+
+/* ── 5. 能量波纹 — 从中心向外扩散的圆环 ── */
+@keyframes energyRipple1 {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+@keyframes energyRipple2 {
+  0%   { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+.energy-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(59,130,246,0.5);
+}
+.energy-ripple:nth-child(1) { animation: energyRipple1 1.6s ease-out infinite; }
+.energy-ripple:nth-child(2) { animation: energyRipple2 1.6s ease-out infinite 0.5s; }
+
+/* ── 6. 进度脉冲点 — 依次亮起的圆点序列 ── */
+@keyframes dotSequence {
+  0%, 20%  { transform: scale(0.6); opacity: 0.3; background: #93c5fd; }
+  50%      { transform: scale(1.3); opacity: 1;   background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+  100%     { transform: scale(0.6); opacity: 0.3; background: #93c5fd; }
+}
+.dot-sequence {
+  display: flex;
+  gap: 6px;
+}
+.dot-sequence span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #93c5fd;
+}
+.dot-sequence span:nth-child(1) { animation: dotSequence 1.4s ease-in-out infinite 0.0s; }
+.dot-sequence span:nth-child(2) { animation: dotSequence 1.4s ease-in-out infinite 0.2s; }
+.dot-sequence span:nth-child(3) { animation: dotSequence 1.4s ease-in-out infinite 0.4s; }
+.dot-sequence span:nth-child(4) { animation: dotSequence 1.4s ease-in-out infinite 0.6s; }
+
+/* ── 7. 形态渐变球 — 会呼吸变形的 blobby 形状 ── */
+@keyframes morphBlob {
+  0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50%  { border-radius: 50% 50% 40% 60% / 40% 50% 60% 50%; }
+  75%  { border-radius: 40% 60% 50% 50% / 60% 40% 50% 50%; }
+  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+}
+.morph-blob {
+  animation: morphBlob 4s ease-in-out infinite;
+}
+
+/* ── 8. 扫描线 — 从上到下扫描 ── */
+@keyframes scanLine {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+.scan-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
+  animation: scanLine 2.5s ease-in-out infinite;
+}
+
+/* ── 9. 网格粒子场 — 随机闪烁的点阵 ── */
+@keyframes gridFlicker {
+  0%, 100% { opacity: 0.15; }
+  30%      { opacity: 0.7; }
+  60%      { opacity: 0.1; }
+}
+.grid-particle {
+  animation: gridFlicker 2.5s ease-in-out infinite;
+}
+
+/* ── 10. 脑电波 — 振幅变化的波浪线 ── */
+@keyframes brainwave1 {
+  0%, 100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1.2); }
+}
+@keyframes brainwave2 {
+  0%, 100% { transform: scaleY(0.6); }
+  50%      { transform: scaleY(0.9); }
+}
+.brainwave-bar {
+  width: 3px;
+  background: linear-gradient(to top, #60a5fa, #818cf8);
+  border-radius: 2px;
+  transform-origin: bottom;
+}
+.brainwave-bar:nth-child(odd)  { animation: brainwave1 0.8s ease-in-out infinite; }
+.brainwave-bar:nth-child(even) { animation: brainwave2 1.1s ease-in-out infinite; }
+
+/* ── prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .neural-core,
+  .orbit-ring-1,
+  .orbit-ring-2,
+  .particle,
+  .cursor-blink,
+  .morph-blob,
+  .shimmer-surface::after,
+  .energy-ripple,
+  .brainwave-bar {
+    animation: none !important;
+  }
+  .dot-sequence span {
+    animation: none !important;
+    opacity: 0.5;
+  }
+}
