@@ -25,7 +25,7 @@ echo "🧹 清理 Celery 残留任务..."
 cleanup() {
     echo ""
     echo "🛑 正在停止所有服务..."
-    kill $BACKEND_PID $CELERY_PID $FRONTEND_PID 2>/dev/null
+    kill $BACKEND_PID $CELERY_PID $FRONTEND_PID $MCP_PID 2>/dev/null
     echo "✅ 服务已关闭。"
     exit
 }
@@ -63,6 +63,15 @@ echo "🎨 [Frontend] 启动中..."
 ) &
 FRONTEND_PID=$!
 
+echo "📡 [MCP Server] 启动中..."
+(
+    cd backend && \
+    uv run python -m app.mcp_server \
+    > ../mcp.log 2>&1
+) &
+MCP_PID=$!
+
+
 echo "-------------------------------------------------------"
 echo "✅ 所有服务已在后台运行！"
 echo "🌐 前端地址: http://localhost:$FRONTEND_PORT"
@@ -73,6 +82,8 @@ echo "📝 日志:"
 echo "   tail -f backend.log"
 echo "   tail -f celery.log"
 echo "   tail -f frontend.log"
+echo "   tail -f mcp.log"
+
 echo "-------------------------------------------------------"
 echo "💡 按 [Ctrl+C] 可同时停止所有服务。"
 
