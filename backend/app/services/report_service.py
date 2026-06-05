@@ -1,3 +1,13 @@
+"""Deprecated report service compatibility module.
+
+Report generation now runs through the LangGraph research flow in
+`app.graphs.research_graph` and is launched by `app.tasks.research.task_run_research`.
+This module is kept only to make accidental legacy imports fail with a clear message.
+"""
+
+
 async def generate_report(job_id: str, resume_id: str | None = None) -> dict:
-    # TODO: 串联 crawler → search → llm，依次生成 6 模块内容 ⚠️ 风险：LLM 链路耗时长，需分步推 SSE 进度
-    raise NotImplementedError
+    raise RuntimeError(
+        "generate_report() is deprecated. Use task_run_research(job_id) and "
+        "app.graphs.research_graph.get_research_graph() instead."
+    )
