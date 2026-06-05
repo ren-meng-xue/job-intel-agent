@@ -29,9 +29,9 @@ function strengthBarColor(barIndex: number, score: number): string {
 export default function AuthPage() {
   const router = useRouter()
   const [tab, setTab] = useState<'login' | 'register'>('login')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState('admin@admin.com')
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState('admin123')
   const [showPwd, setShowPwd] = useState(false)
   const [showRegPwd, setShowRegPwd] = useState(false)
   const [loading, setLoading] = useState(false)
