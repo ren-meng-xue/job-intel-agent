@@ -161,6 +161,16 @@ async def extract_job_info_from_images(images: list[bytes]) -> "ExtractedJobInfo
     ]
     response_text = await chat(messages=messages, model="gpt-4o", response_format={"type": "json_object"})
     data = json.loads(response_text)
+    return _coerce_job_info(data)
+
+
+def _coerce_job_info(data: dict) -> "ExtractedJobInfo":
+    """LLM 有时对必填字段返回 null，统一用空值兜底再构造"""
+    for field in ("title", "company", "jd_summary"):
+        if data.get(field) is None:
+            data[field] = ""
+    if not isinstance(data.get("requirements"), list):
+        data["requirements"] = []
     return ExtractedJobInfo(**data)
 
 
@@ -187,4 +197,4 @@ async def extract_job_info(markdown: str) -> ExtractedJobInfo:
         response_format={"type": "json_object"},
     )
     data = json.loads(response_text)
-    return ExtractedJobInfo(**data)
+    return _coerce_job_info(data)
