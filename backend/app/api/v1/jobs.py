@@ -88,7 +88,7 @@ async def create_job_from_text(
 @router.post("/from-images", response_model=JobResponse, status_code=201)
 async def create_job_from_images(
     images: list[UploadFile] = File(...),
-    resume_id: str | None = Form(None),
+    resume_id: str = Form(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

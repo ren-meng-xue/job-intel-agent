@@ -28,7 +28,7 @@ export default function ResumeUpload({ onFileSelect }: Props) {
     >
       <div className="text-3xl mb-2">📄</div>
       <p className="text-gray-500 text-sm group-hover:text-blue-600">
-        {resumeFile ? resumeFile.name : "点击或拖拽上传简历（PDF / DOCX，可选）"}
+        {resumeFile ? resumeFile.name : "点击或拖拽上传简历（PDF / DOCX，必填）"}
       </p>
       <p className="text-gray-400 text-xs mt-1">上传后 AI 将生成个性化面试题预测</p>
       <input

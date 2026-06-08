@@ -220,7 +220,7 @@ export default function JobInputForm() {
               )}
               <button
                 type="submit"
-                disabled={loading || !url}
+                disabled={loading || !url || !resumeFile}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200"
               >
                 开始分析
@@ -259,7 +259,7 @@ export default function JobInputForm() {
               <button
                 type="button"
                 onClick={handleManualSubmit}
-                disabled={!rawText.trim()}
+                disabled={!rawText.trim() || !resumeFile}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200"
               >
                 开始分析
@@ -322,7 +322,7 @@ export default function JobInputForm() {
               <button
                 type="button"
                 onClick={handleManualSubmit}
-                disabled={images.length === 0}
+                disabled={images.length === 0 || !resumeFile}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200"
               >
                 开始分析

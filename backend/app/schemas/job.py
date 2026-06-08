@@ -13,12 +13,12 @@ class ExtractedJobInfo(BaseModel):
 
 class JobCreate(BaseModel):
     url: HttpUrl
-    resume_id: str | None = None
+    resume_id: str
 
 
 class JobCreateFromText(BaseModel):
     raw_content: str
-    resume_id: str | None = None
+    resume_id: str
 
 
 class RawContentPayload(BaseModel):
